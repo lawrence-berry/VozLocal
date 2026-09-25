@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="vozLocal">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8CC2EC"/>
+      <stop offset="1" stop-color="#5A9AD6"/>
+    </linearGradient>
+  </defs>
+  <g fill="#F6B40E" stroke="#B5730A" stroke-width="2" stroke-linejoin="round">
+    <path d="M193.2 31.1 L196.0 14.0 L198.8 31.1Z M204.5 32.3 L213.6 17.5 L209.6 34.4Z M214.4 37.6 L228.5 27.5 L218.4 41.6Z M221.6 46.4 L238.5 42.4 L223.7 51.5Z M224.9 57.2 L242.0 60.0 L224.9 62.8Z M223.7 68.5 L238.5 77.6 L221.6 73.6Z M218.4 78.4 L228.5 92.5 L214.4 82.4Z M209.6 85.6 L213.6 102.5 L204.5 87.7Z M198.8 88.9 L196.0 106.0 L193.2 88.9Z M187.5 87.7 L178.4 102.5 L182.4 85.6Z M177.6 82.4 L163.5 92.5 L173.6 78.4Z M170.4 73.6 L153.5 77.6 L168.3 68.5Z M167.1 62.8 L150.0 60.0 L167.1 57.2Z M168.3 51.5 L153.5 42.4 L170.4 46.4Z M173.6 41.6 L163.5 27.5 L177.6 37.6Z M182.4 34.4 L178.4 17.5 L187.5 32.3Z"/>
+    <circle cx="196" cy="60" r="26"/>
+  </g>
+  <path d="M52 60 H188 A36 36 0 0 1 224 96 V170 A36 36 0 0 1 188 206 H100 L56 240 L64 206 H52 A36 36 0 0 1 16 170 V96 A36 36 0 0 1 52 60 Z" fill="url(#sky)"/>
+  <polyline points="62,102 102,133 62,164" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="118" y="152" width="64" height="18" rx="5" fill="#FFFFFF"/>
+</svg>

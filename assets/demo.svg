@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-label="vozLocal demo: a Spanish phrase appears, a countdown runs, then the English translation is revealed">
+  <style>
+    text { font-family: SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-size: 18px; white-space: pre }
+    @keyframes phrase { 0%, 9.99% { opacity: 0 } 10.00%, 93.33% { opacity: 1 } 93.34%, 100% { opacity: 0 } }
+    .phrase { opacity: 0; animation: phrase 9.0s linear infinite }
+    @keyframes d8 { 0%, 9.99% { opacity: 0 } 10.00%, 12.78% { opacity: 1 } 12.79%, 100% { opacity: 0 } }
+    .d8 { opacity: 0; animation: d8 9.0s linear infinite }
+    @keyframes d7 { 0%, 12.77% { opacity: 0 } 12.78%, 15.56% { opacity: 1 } 15.57%, 100% { opacity: 0 } }
+    .d7 { opacity: 0; animation: d7 9.0s linear infinite }
+    @keyframes d6 { 0%, 15.54% { opacity: 0 } 15.56%, 18.33% { opacity: 1 } 18.34%, 100% { opacity: 0 } }
+    .d6 { opacity: 0; animation: d6 9.0s linear infinite }
+    @keyframes d5 { 0%, 18.32% { opacity: 0 } 18.33%, 21.11% { opacity: 1 } 21.12%, 100% { opacity: 0 } }
+    .d5 { opacity: 0; animation: d5 9.0s linear infinite }
+    @keyframes d4 { 0%, 21.10% { opacity: 0 } 21.11%, 23.89% { opacity: 1 } 23.90%, 100% { opacity: 0 } }
+    .d4 { opacity: 0; animation: d4 9.0s linear infinite }
+    @keyframes d3 { 0%, 23.88% { opacity: 0 } 23.89%, 26.67% { opacity: 1 } 26.68%, 100% { opacity: 0 } }
+    .d3 { opacity: 0; animation: d3 9.0s linear infinite }
+    @keyframes d2 { 0%, 26.66% { opacity: 0 } 26.67%, 29.44% { opacity: 1 } 29.46%, 100% { opacity: 0 } }
+    .d2 { opacity: 0; animation: d2 9.0s linear infinite }
+    @keyframes d1 { 0%, 29.43% { opacity: 0 } 29.44%, 32.22% { opacity: 1 } 32.23%, 100% { opacity: 0 } }
+    .d1 { opacity: 0; animation: d1 9.0s linear infinite }
+    @keyframes tr { 0%, 32.21% { opacity: 0 } 32.22%, 93.33% { opacity: 1 } 93.34%, 100% { opacity: 0 } }
+    .tr { opacity: 0; animation: tr 9.0s linear infinite }
+    @keyframes blink { 50% { opacity: 0 } } .cursor { animation: blink 1s steps(1) infinite }
+  </style>
+  <rect width="720" height="220" rx="12" fill="#1E1E2E"/>
+  <path d="M0 12 A12 12 0 0 1 12 0 H708 A12 12 0 0 1 720 12 V36 H0 Z" fill="#2A2A3C"/>
+  <circle cx="22" cy="18" r="6" fill="#FF5F57"/><circle cx="42" cy="18" r="6" fill="#FEBC2E"/><circle cx="62" cy="18" r="6" fill="#28C840"/>
+  <text x="360" y="23" text-anchor="middle" fill="#9399B2" style="font-size:13px">zsh — vozLocal</text>
+  <text x="32" y="80" fill="#A6ADC8">Last login: Thu Sep 24 on ttys001</text>
+  <text class="phrase" x="32" y="118" fill="#5FD7FF" font-weight="bold">Qué quilombo</text>
+  <text class="d8" x="32" y="150" fill="#6C7086">  ........</text>
+  <text class="d7" x="32" y="150" fill="#6C7086">  .......</text>
+  <text class="d6" x="32" y="150" fill="#6C7086">  ......</text>
+  <text class="d5" x="32" y="150" fill="#6C7086">  .....</text>
+  <text class="d4" x="32" y="150" fill="#6C7086">  ....</text>
+  <text class="d3" x="32" y="150" fill="#6C7086">  ...</text>
+  <text class="d2" x="32" y="150" fill="#6C7086">  ..</text>
+  <text class="d1" x="32" y="150" fill="#6C7086">  .</text>
+  <text class="tr" x="32" y="150" fill="#CDD6F4">  → What a mess</text>
+  <text x="32" y="190" fill="#A6E3A1">~ <tspan fill="#89B4FA">❯</tspan> <tspan class="cursor" fill="#CDD6F4">█</tspan></text>
+</svg>
