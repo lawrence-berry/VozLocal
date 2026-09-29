@@ -59,6 +59,9 @@ Each day has one featured category, and every category comes up once before any 
 ### 🔁 Available on demand
 Want another one? Type `voz` at any time for a new phrase from today's category.
 
+### ✅ Mark phrases as learned
+Know a phrase already? Type `yas` right after it appears and VozLocal won't pick it again. If you learn every phrase in a category, its phrases come back so you can keep reviewing.
+
 ### 🌍 Add your own regions
 Phrases are stored as plain text files, one folder per region. To add Mexican slang, Castilian idioms or a whole new language, create a folder and a few files. You don't need to change any code.
 
@@ -115,6 +118,7 @@ echo 'source ~/VozLocal/terminal/vozlocal.plugin.zsh' >> ~/.zshrc
 |---|---|
 | *(open a terminal)* | Shows a phrase automatically, at most once per interval |
 | `voz` | Shows a new phrase from today's category straight away |
+| `yas` | Marks the last phrase shown as learned, so it stops coming up |
 
 ---
 
@@ -165,7 +169,7 @@ VozLocal is small, but it's written like it will run inside someone else's shell
 - **Recovers from interruptions.** Pressing Ctrl-C during the countdown clears the line and exits with the standard status code `130`.
 - **Copes with messy data.** Blank lines and lines without a separator are skipped.
 - **Keeps the daily order stable.** The daily category comes from a Fisher–Yates shuffle seeded by the current cycle number. Every shell on your machine agrees on today's category, and no state has to be stored.
-- **Uses few processes.** It reads the time from zsh's built-in `$EPOCHSECONDS` rather than starting `date`. The only state it keeps is one timestamp in `$XDG_CACHE_HOME` (default `~/.cache/vozlocal/`).
+- **Uses few processes.** It reads the time from zsh's built-in `$EPOCHSECONDS` rather than starting `date`. Its state lives in `$XDG_CACHE_HOME` (default `~/.cache/vozlocal/`): one timestamp, the last phrase shown, and the list of learned phrases. Delete the `learned` file there to start over.
 
 ---
 
@@ -177,7 +181,7 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 17 checks in about 7 seconds. They cover the phrase-and-reveal flow, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 22 checks in about 8 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
 
 ---
 

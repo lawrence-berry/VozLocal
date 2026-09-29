@@ -24,11 +24,18 @@ voz() {
   local -a files=( $VOZLOCAL_HOME/data/${VOZLOCAL_REGION:-es_AR}/*.psv(N) )
   (( $#files )) || { print -u2 "vozlocal: no .psv files found"; return 1 }
 
-  local idx line
+  local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal idx line
+  local -a src
   idx=$(_vozlocal_category $#files $(( EPOCHSECONDS / 86400 )))
-  line=$(awk -v seed=$RANDOM 'NR > 1 && /\|/ { rows[++n] = $0 }
-    END { srand(seed); if (n) print rows[int(rand() * n) + 1] }' $files[idx])
+  src=( $files[idx] )
+  [[ -r $dir/learned ]] && src=( $dir/learned $src )
+  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned.
+  line=$(awk -v seed=$RANDOM -v learned=$dir/learned '
+    FILENAME == learned { done[$0]; next }
+    FNR > 1 && /\|/ { all[++n] = $0; if (!($0 in done)) todo[++m] = $0 }
+    END { srand(seed); if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1] }' $src)
   [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
+  mkdir -p $dir && print -r -- $line >| $dir/last_phrase
 
   _vozlocal_int VOZLOCAL_DELAY 2
   trap 'printf "\r\e[K"; return 130' INT
@@ -39,6 +46,18 @@ voz() {
     sleep 0.25
   done
   print -r -- $'\r\e[K  → '${line#*|}
+}
+
+# Mark the phrase voz showed last as learned, so voz stops picking it.
+yas() {
+  emulate -L zsh
+  local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal last
+  local -a learned
+  [[ -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
+  [[ -n $last ]] || { print -u2 "yas: no phrase to mark yet, run voz first"; return 1 }
+  [[ -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
+  [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned
+  print -r -- "  ✓ learned: ${last%%|*}"
 }
 
 # Auto-show in interactive terminals, at most once per VOZLOCAL_INTERVAL minutes (0 = every shell).
