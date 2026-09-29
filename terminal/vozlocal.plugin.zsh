@@ -30,7 +30,9 @@ voz() {
   src=( $files[idx] )
   [[ -r $dir/learned ]] && src=( $dir/learned $src )
   # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned.
-  line=$(awk -v seed=$RANDOM -v learned=$dir/learned '
+  # Read $RANDOM here, not inside $( ): subshells all see the same value, so repeated voz calls would repeat.
+  local seed=$RANDOM
+  line=$(awk -v seed=$seed -v learned=$dir/learned '
     FILENAME == learned { done[$0]; next }
     FNR > 1 && /\|/ { all[++n] = $0; if (!($0 in done)) todo[++m] = $0 }
     END { srand(seed); if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1] }' $src)
