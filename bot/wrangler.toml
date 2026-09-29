@@ -1,0 +1,16 @@
+name = "vozlocal-bot"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+GRAPH_VERSION = "v26.0"
+
+# `npx wrangler d1 create vozlocal` prints the id to paste here.
+[[d1_databases]]
+binding = "DB"
+database_name = "vozlocal"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Secrets, set with `npx wrangler secret put <NAME>` (locally: .dev.vars, see .dev.vars.example):
+# ALLOWED_NUMBERS, APP_SECRET, VERIFY_TOKEN, WHATSAPP_TOKEN, PHONE_NUMBER_ID, SYNC_TOKEN

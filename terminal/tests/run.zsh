@@ -3,7 +3,7 @@
 emulate -L zsh
 setopt extended_glob
 
-unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL  # user settings must not leak into the tests
+unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN  # user settings must not leak into the tests
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
@@ -84,6 +84,64 @@ check "voz skips learned phrases" \
 
 check "voz falls back to learned phrases when all are learned" \
   "$(run "$C; rm -rf \$XDG_CACHE_HOME; voz >/dev/null; yas >/dev/null; voz; print rc=\$?")" "*→ hello*rc=0"
+
+# --- voz sync ---
+
+# curl stand-in: records its arguments and stdin, answers with $TMP/reply, fails like curl -f without one.
+S="curl() { cat >| \$VOZLOCAL_HOME/curl.stdin; print -r -- \"\$@\" >> \$VOZLOCAL_HOME/curl.args; [[ -r \$VOZLOCAL_HOME/reply ]] || return 22; cat \$VOZLOCAL_HOME/reply }"
+S="$S; XDG_CACHE_HOME=${(q)TMP}/sync VOZLOCAL_BOT_URL=https://bot.test/ VOZLOCAL_BOT_TOKEN=tok-123"
+MINE=$TMP/data/test/mine.psv
+reset_sync() { rm -rf $TMP/sync $MINE $TMP/curl.*(N) $TMP/reply }
+
+reset_sync
+check "voz sync without settings fails with a message" \
+  "$(run 'voz sync; print rc=$?')" $'voz sync: set VOZLOCAL_BOT_URL and VOZLOCAL_BOT_TOKEN first\nrc=1'
+
+check "voz sync refuses a token that could escape curl's config" \
+  "$(run "$S; VOZLOCAL_BOT_TOKEN='x\" -o /tmp/pwned'; voz sync; print rc=\$?")" "*may only hold*rc=1"
+
+print "1|Bondi|Bus\n2|Che|Hey" > $TMP/reply
+check "voz sync adds new phrases to mine.psv" \
+  "$(run "$S; voz sync")"$'\n'"$(<$MINE)" $'voz sync: 2 new phrases\nphrase?translation\nBondi?Bus\nChe?Hey'
+
+check "voz sync sends the token on stdin, not the command line" \
+  "$(<$TMP/curl.stdin) / $(<$TMP/curl.args)" '*Authorization: Bearer tok-123* / *--url https://bot.test/phrases?since=0'
+
+print -n > $TMP/reply
+check "voz sync asks only for phrases after the last one" \
+  "$(run "$S; voz sync"; tail -1 $TMP/curl.args)" $'voz sync: up to date\n*since=2'
+
+reset_sync; print "1|hola|hi\n2|Chamuyo|Sweet talk" > $TMP/reply
+check "voz sync skips phrases already in the region" \
+  "$(run "$S; voz sync")"$'\n'"$(<$MINE)" $'voz sync: 1 new phrase\nphrase?translation\nChamuyo?Sweet talk'
+
+reset_sync; print "x|a|b\n1|a|b|c\n2|esc"$'\e'"[31m|red\n3|ok|fine" > $TMP/reply
+check "voz sync drops malformed and hostile rows" \
+  "$(run "$S; voz sync"; cat $MINE $TMP/sync/vozlocal/sync_last_id)" $'voz sync: 1 new phrase\nphrase?translation\nok?fine\n3'
+
+reset_sync; print "phrase|translation\nmine|kept" > $MINE
+check "a failed sync leaves mine.psv and the last id alone" \
+  "$(run "$S; voz sync; print rc=\$?"; cat $MINE; [[ -e $TMP/sync/vozlocal/sync_last_id ]] && print MOVED)" \
+  $'voz sync: could not reach the bot\nrc=1\nphrase?translation\nmine?kept'
+
+reset_sync; print "phrase|translation\ntres|three" > $TMP/data/two/mine.psv
+shown=$(run 'VOZLOCAL_REGION=two; repeat 40 voz')
+check "voz mixes mine.psv into today's category" "$shown" "*three*"
+check "voz still shows the category's own phrases" "$shown" "*(one|two)*"
+mkdir -p $TMP/data/onlymine && cp $TMP/data/two/mine.psv $TMP/data/onlymine/
+check "mine.psv alone is not a category" \
+  "$(run 'VOZLOCAL_REGION=onlymine voz; print rc=$?')" $'vozlocal: no .psv files found\nrc=1'
+rm -rf $TMP/data/two/mine.psv $TMP/data/onlymine
+
+# Terminal opening with the bot configured. Sourced from a copy in $TMP so VOZLOCAL_HOME is the fixtures.
+cp $PLUGIN $TMP/auto.plugin.zsh
+auto="$S; VOZLOCAL_REGION=test VOZLOCAL_DELAY=0; source ${(q)TMP}/auto.plugin.zsh; repeat 30 { [[ -e ${(q)TMP}/curl.args ]] && break; sleep 0.1 }; sleep 0.3"
+reset_sync; print "1|Bondi|Bus" > $TMP/reply
+check "opening a terminal syncs in the background" "$(run_tty $auto; cat $MINE)" "*Bondi?Bus*"
+rm -f $TMP/curl.args
+check "a second terminal within VOZLOCAL_SYNC_INTERVAL doesn't sync again" \
+  "$(run_tty $auto; [[ -e $TMP/curl.args ]] && print SYNCED)" "*~*SYNCED*"
+reset_sync
 
 # --- daily category rotation ---
 
