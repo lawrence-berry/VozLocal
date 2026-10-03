@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Render assets/logo.svg as the extension's PNG icons, in Playwright's Chromium (run through bin/dev).
+#
+#   bin/build-icons   write extension/icons/icon{16,32,48,128}.png
+
+require 'base64'
+require 'playwright'
+
+ROOT = File.expand_path('../..', __dir__)
+LOGO = File.join(ROOT, 'assets', 'logo.svg')
+DIR = File.join(ROOT, 'chrome', 'extension', 'icons')
+SIZES = [16, 32, 48, 128].freeze
+
+svg = "data:image/svg+xml;base64,#{Base64.strict_encode64(File.binread(LOGO))}"
+Dir.mkdir(DIR) unless Dir.exist?(DIR)
+
+Playwright.create(playwright_cli_executable_path: 'playwright') do |playwright|
+  playwright.chromium.launch(headless: true) do |browser|
+    SIZES.each do |size|
+      page = browser.new_page(viewport: { width: size, height: size })
+      page.set_content(%(<body style="margin:0"><img src="#{svg}" width="#{size}" height="#{size}"></body>))
+      page.wait_for_load_state(state: 'load')
+      path = File.join(DIR, "icon#{size}.png")
+      page.screenshot(path: path, omitBackground: true)
+      page.close
+      puts "wrote #{path.delete_prefix("#{ROOT}/")}"
+    end
+  end
+end
