@@ -8,7 +8,7 @@ At the end you'll have:
 - a WhatsApp number (Meta's free test number to start with) that answers `phrase = meaning` messages from your phone
 - `voz sync` pulling confirmed phrases into your terminal
 
-Allow about an hour the first time. Commands are written for zsh, the macOS default. Meta's menus were checked in October 2026 and change often, so labels may differ slightly. Each section says what the page is for, so you can still find it if it moves.
+Allow about an hour the first time. Commands are written for zsh, the macOS default, and from section 2 on **every command runs in the `bot/` folder**. Meta's menus were checked in October 2026 and change often, so labels may differ slightly. Each section says what the page is for, so you can still find it if it moves.
 
 ## Contents
 
@@ -79,13 +79,23 @@ The bot's replies need two more things:
 | **Webhook** | The URL Meta calls with each incoming message: `…/webhook` on the Worker. |
 | **Webhook field** | A kind of event (for example **messages**) the webhook subscribes to. A webhook with a URL but no fields receives nothing. |
 | **Subscribed apps** | The apps a WABA delivers events to. An empty list means nothing is delivered, whatever the webhook settings say. |
-| **Test number** | A free US number Meta gives every new app. It can only talk to up to 5 verified recipients, and you can't message it first. |
+| **Test number** | A free US number Meta gives every new app. It only talks to a short list of verified recipients (5 when we checked), and the reliable way to start a chat is to have it message you first. |
 
 ---
 
 ## 2. The six keys
 
-They all live in `bot/.dev.vars` (gitignored) and, once uploaded, in Cloudflare as Worker secrets.
+They all live in `bot/.dev.vars` (gitignored) and, once uploaded, in Cloudflare as Worker secrets. Create the file now, from the repo root:
+
+```sh
+cd bot
+cp .dev.vars.example .dev.vars
+chmod 600 .dev.vars                                 # only you can read it
+openssl rand -hex 16                                # paste as VERIFY_TOKEN
+openssl rand -hex 24                                # paste as SYNC_TOKEN
+```
+
+Fill in `ALLOWED_NUMBERS`, `VERIFY_TOKEN` and `SYNC_TOKEN` straight away. The other three come from Meta in sections 5 and 6. Stay in `bot/` from here on.
 
 | Key | What it's for | Where it comes from | Looks like |
 |---|---|---|---|
@@ -108,7 +118,6 @@ You'll also see two IDs that aren't secrets but are needed during setup:
 Deploy first. Meta tests the webhook URL the moment you save it, so the bot must already be answering.
 
 ```sh
-cd bot
 npm install
 npx wrangler login                                  # opens your browser
 npx wrangler d1 create vozlocal                     # prints a database_id
@@ -119,6 +128,14 @@ Paste the printed `database_id` into `wrangler.toml`, then:
 ```sh
 npx wrangler d1 migrations apply vozlocal --remote  # creates the tables
 npx wrangler deploy                                 # prints https://vozlocal-bot.<you>.workers.dev
+```
+
+Upload the three keys you already have. Each command asks for the value; paste it from `.dev.vars`. `VERIFY_TOKEN` has to be in Cloudflare before section 9, because Meta checks it when you save the webhook, and the bot refuses every check until it's set.
+
+```sh
+npx wrangler secret put VERIFY_TOKEN
+npx wrangler secret put SYNC_TOKEN
+npx wrangler secret put ALLOWED_NUMBERS
 ```
 
 > **Trap: the URL doesn't answer at first.** On a brand-new Cloudflare account, the `*.workers.dev` subdomain can take a few minutes to start resolving. Requests fail with no HTTP status at all (`curl` shows `000`). Wait and retry. Once it works, `https://vozlocal-bot.<you>.workers.dev/` returns `Not found`, which is correct: the bot only answers on `/webhook` and `/phrases`.
@@ -170,7 +187,7 @@ Click **Show** next to **App secret**. Meta may ask for your password. The value
 
 ## 6. Create a system user and its token
 
-The token on the Quickstart page expires in 24 hours. The bot needs a permanent one, which belongs to a **system user**. This part happens on the other website.
+The token on the Quickstart page is short-lived (Meta says it expires quickly). The bot needs a permanent one, which belongs to a **system user**. This part happens on the other website.
 
 **Page:** [business.facebook.com](https://business.facebook.com) → **Settings** → **Users → System users**
 
@@ -201,7 +218,7 @@ Easy to miss, and nothing warns you if it's skipped.
 2. Choose **WhatsApp accounts**, then tick the account that holds your number.
 3. Give it **Full control**, then save.
 
-> **Trap: a token that looks fine but can't do anything.** Without this step, the token still generates with both WhatsApp permissions and reads as valid and never-expiring. But it can't see or send from any number. Section 14's token check shows what the token can reach.
+> **Trap: a token that looks fine but can't do anything.** Without this step, the token still generates with both WhatsApp permissions and reads as valid and never-expiring. But it can't see or send from any number. The `PHONE_NUMBER_ID` check in section 14 shows whether the token can reach your number.
 
 ### 6d. Generate the token
 
@@ -217,7 +234,7 @@ Easy to miss, and nothing warns you if it's skipped.
 
 ## 7. Register the phone number
 
-A number has to be registered with the Cloud API before it can send or receive. The Quickstart flow doesn't always do this for the test number. The symptoms of an unregistered number:
+A number has to be registered with the Cloud API before it can send or receive. Meta says it registers the test number automatically, but ours wasn't. Skip this section unless you see these symptoms of an unregistered number:
 
 - Sending fails with `(#133010) Account not registered`.
 - Your phone says the number **isn't on WhatsApp**.
@@ -225,7 +242,7 @@ A number has to be registered with the Cloud API before it can send or receive. 
 Register it with one call. Registering also sets a 6-digit **two-step verification PIN** for the number, so pick one and keep it (a comment in `.dev.vars` works). You only need the PIN again if you re-register.
 
 ```sh
-cd bot && set -a && . ./.dev.vars && set +a
+set -a && . ./.dev.vars && set +a
 print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" |
   curl -sS -K - -H 'Content-Type: application/json' \
     -d '{"messaging_product":"whatsapp","pin":"<your 6-digit PIN>"}' \
@@ -235,11 +252,13 @@ print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" |
 
 (These commands pass the token to `curl` on stdin, so it never appears in `ps` or your shell history.)
 
+> **Trap: the register limit.** Meta allows 10 register calls per number in 72 hours. Past that, it refuses with error `133016` and blocks registration for 72 hours. Don't run this in a loop. If it fails, find out why first (section 15).
+
 ---
 
 ## 8. Add your own number as a recipient
 
-Test numbers only talk to numbers on their recipient list (at most 5).
+Test numbers only talk to numbers on their recipient list (5 at most when we checked).
 
 **Page:** app dashboard → **Use cases → Customize → Quickstart**, section **Send and receive messages**
 
@@ -264,13 +283,13 @@ The number then shows as selected in **To**.
 > **Trap: the webhook is saved, but no fields are subscribed.** The callback URL can show as saved and active while **no fields** are subscribed, and then Meta sends nothing at all. The page doesn't make this obvious. Check it from the command line (section 14). You can also subscribe the field with the API:
 >
 > ```sh
-> cd bot && set -a && . ./.dev.vars && set +a
+> set -a && . ./.dev.vars && set +a
 > APP_ID=<your App ID>
-> print -r -- "header = \"Authorization: Bearer $APP_ID|$APP_SECRET\"" |
+> print -rl -- "header = \"Authorization: Bearer $APP_ID|$APP_SECRET\"" \
+>               "data-urlencode = \"verify_token=$VERIFY_TOKEN\"" |
 >   curl -sS -K - \
 >     --data-urlencode object=whatsapp_business_account \
 >     --data-urlencode callback_url=https://vozlocal-bot.<you>.workers.dev/webhook \
->     --data-urlencode "verify_token=$VERIFY_TOKEN" \
 >     --data-urlencode fields=messages \
 >     "https://graph.facebook.com/v26.0/$APP_ID/subscriptions"
 > # → {"success":true}
@@ -287,31 +306,24 @@ Even with the webhook and its fields set, Meta only delivers a WABA's messages t
 Check it, and add the app if the list is empty:
 
 ```sh
-cd bot && set -a && . ./.dev.vars && set +a
+set -a && . ./.dev.vars && set +a
 WABA_ID=<your WhatsApp Business Account ID>
-g() { print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" | curl -sS -K - "$@"; echo; }
+# `function graph` rather than `g()`: oh-my-zsh aliases g to git, which would break a g() definition.
+function graph { print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" | curl -sS -K - "$@"; echo; }
 
-g "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"            # {"data":[]} means nothing is linked
-g -X POST "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"    # → {"success":true}
-g "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"            # now lists your app
+graph "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"            # {"data":[]} means nothing is linked
+graph -X POST "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"    # → {"success":true}
+graph "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"            # now lists your app
 ```
 
 ---
 
 ## 11. Upload the keys to Cloudflare
 
-Upload all six from `bot/.dev.vars` in one go. They're piped straight from the file, so nothing is printed:
+Upload all six from `.dev.vars` in one go. Wrangler reads the file itself, so nothing is printed. It also overwrites the three keys from section 3 with the same values, which is harmless.
 
 ```sh
-cd bot
-python3 -c '
-import json
-d = {}
-for line in open(".dev.vars"):
-    line = line.split("#", 1)[0].strip()
-    if "=" in line:
-        k, v = line.split("=", 1); d[k.strip()] = v.strip()
-print(json.dumps(d))' | npx wrangler secret bulk
+npx wrangler secret bulk .dev.vars
 ```
 
 To change a single key later: `npx wrangler secret put WHATSAPP_TOKEN` (it prompts for the value). Secrets take effect straight away, with no redeploy.
@@ -320,15 +332,15 @@ To change a single key later: `npx wrangler secret put WHATSAPP_TOKEN` (it promp
 
 ## 12. Send the first message
 
-> **Trap: "this number isn't on WhatsApp".** Your phone shows this when you try to start a chat with the test number, even when everything is set up. Test numbers can't be messaged first. The business has to open the chat.
+> **Trap: "this number isn't on WhatsApp".** Your phone may show this when you try to start a chat with the test number. For us it happened while the number was unregistered (section 7). We didn't retest starting a chat afterwards, because the reliable route is to have the business open the chat.
 
-Have the test number send you Meta's built-in `hello_world` template, which is free from a test number:
+Have the test number send you Meta's built-in `hello_world` template. Test numbers need no payment method to send it:
 
 ```sh
-cd bot && set -a && . ./.dev.vars && set +a
+set -a && . ./.dev.vars && set +a
 print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" |
   curl -sS -K - -H 'Content-Type: application/json' \
-    -d "{\"messaging_product\":\"whatsapp\",\"to\":\"$ALLOWED_NUMBERS\",\"type\":\"template\",\"template\":{\"name\":\"hello_world\",\"language\":{\"code\":\"en_US\"}}}" \
+    -d "{\"messaging_product\":\"whatsapp\",\"to\":\"${ALLOWED_NUMBERS%%,*}\",\"type\":\"template\",\"template\":{\"name\":\"hello_world\",\"language\":{\"code\":\"en_US\"}}}" \
     "https://graph.facebook.com/v26.0/$PHONE_NUMBER_ID/messages"
 ```
 
@@ -343,7 +355,7 @@ You:  yes
 Bot:  Saved: Bondi → Bus
 ```
 
-Your reply opens a 24-hour window in which the bot's replies are free. To watch the bot handle messages live, run `npx wrangler tail vozlocal-bot` in `bot/`.
+Your reply opens a 24-hour window in which the bot's replies are free ([Meta pricing](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing)). If sending fails with `131030`, your number isn't on the recipient list yet (section 8). To watch the bot handle messages live, run `npx wrangler tail vozlocal-bot` in `bot/`.
 
 ---
 
@@ -369,23 +381,24 @@ set -a && . ./.dev.vars && set +a
 URL=https://vozlocal-bot.<you>.workers.dev
 APP_ID=<your App ID>
 WABA_ID=<your WhatsApp Business Account ID>
-g() { print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" | curl -sS -K - "$@"; echo; }
+# `function graph` rather than `g()`: oh-my-zsh aliases g to git, which would break a g() definition.
+function graph { print -r -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" | curl -sS -K - "$@"; echo; }
 ```
 
 | What | Command | Good result |
 |---|---|---|
 | Worker is up (3) | `curl -s $URL/` | `Not found` |
-| Webhook token matches (9) | `curl -s "$URL/webhook?hub.mode=subscribe&hub.verify_token=$VERIFY_TOKEN&hub.challenge=ok"` | `ok` |
-| Sync token works (13) | `curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $SYNC_TOKEN" $URL/phrases` | `200` |
-| Token is valid and permanent (6) | `g "https://graph.facebook.com/v26.0/debug_token?input_token=$WHATSAPP_TOKEN"` | `"is_valid":true`, `"expires_at":0`, both `whatsapp_…` scopes |
-| PHONE_NUMBER_ID is a phone number the token can reach (5, 6c) | `g "https://graph.facebook.com/v26.0/$PHONE_NUMBER_ID?fields=display_phone_number,verified_name"` | your number, for example `"+1 555-…"` |
-| What an unknown ID points to (5) | `g "https://graph.facebook.com/v26.0/<id>?metadata=1&fields=id,name"` | the object's name (for example a system user's) |
-| The WABA holds that number (5) | `g "https://graph.facebook.com/v26.0/$WABA_ID/phone_numbers?fields=id,display_phone_number"` | lists the number and its ID |
+| Webhook token matches (3, 9) | `print -rl -- "url = \"$URL/webhook\"" "data-urlencode = \"hub.verify_token=$VERIFY_TOKEN\"" \| curl -sG -K - --data 'hub.mode=subscribe&hub.challenge=ok'` | `ok` |
+| Sync token works (13) | `print -r -- "header = \"Authorization: Bearer $SYNC_TOKEN\"" \| curl -s -o /dev/null -w '%{http_code}\n' -K - $URL/phrases` | `200` |
+| Token is valid and permanent (6) | `print -rl -- "header = \"Authorization: Bearer $WHATSAPP_TOKEN\"" "url = \"https://graph.facebook.com/v26.0/debug_token?input_token=$WHATSAPP_TOKEN\"" \| curl -sS -K -` | `"is_valid":true`, `"expires_at":0`, both `whatsapp_…` scopes |
+| PHONE_NUMBER_ID is a phone number the token can reach (5, 6c). This is also the best test of the token's access | `graph "https://graph.facebook.com/v26.0/$PHONE_NUMBER_ID?fields=display_phone_number,verified_name"` | your number, for example `"+1 555-…"` |
+| What an unknown ID points to (5) | `graph "https://graph.facebook.com/v26.0/<id>?metadata=1&fields=id,name"` | the object's name (for example a system user's) |
+| The WABA holds that number (5) | `graph "https://graph.facebook.com/v26.0/$WABA_ID/phone_numbers?fields=id,display_phone_number"` | lists the number and its ID |
 | Webhook has the messages field (9) | `print -r -- "header = \"Authorization: Bearer $APP_ID\|$APP_SECRET\"" \| curl -sS -K - "https://graph.facebook.com/v26.0/$APP_ID/subscriptions"` | `"fields":[{"name":"messages",…}]`, `"active":true` |
-| WABA delivers to the app (10) | `g "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"` | lists your app |
-| Phrases are stored (12) | `curl -s -H "Authorization: Bearer $SYNC_TOKEN" $URL/phrases` | `1\|Bondi\|Bus` |
+| WABA delivers to the app (10) | `graph "https://graph.facebook.com/v26.0/$WABA_ID/subscribed_apps"` | lists your app |
+| Phrases are stored (12) | `print -r -- "header = \"Authorization: Bearer $SYNC_TOKEN\"" \| curl -s -K - $URL/phrases` | `1\|Bondi\|Bus` |
 
-The `debug_token` check puts the token in the URL. That's how Meta's endpoint works, so run it on a machine you trust.
+Every check passes secrets to `curl` through its config on stdin, so none appear in `ps` or your shell history. `debug_token` still sends the token inside the request URL to Meta, because that's how the endpoint works.
 
 ---
 
@@ -396,8 +409,11 @@ The `debug_token` check puts the token in the URL. That's how Meta's endpoint wo
 | **"No permissions available. Assign an app role to the system user…"** when generating a token | The system user has no role on the app picked in the dialog | Section 6b: connect the app to the portfolio, assign it with full control, pick the same app, reload |
 | Graph error **`Object with ID '1555…' does not exist`** | `PHONE_NUMBER_ID` holds the phone number, not its ID | Section 5: copy the **Phone number ID** under the From number |
 | Graph error **`Tried accessing nonexisting field (display_phone_number)`** | `PHONE_NUMBER_ID` holds some other ID (for example the system user's) | Section 5. Use the "what an ID points to" check in section 14 |
-| Token is valid but **can't see any number** (`me/assigned_whatsapp_business_accounts` is empty) | The WhatsApp account isn't assigned to the system user, or the token predates the assignment | Section 6c, then generate a new token (6d) |
+| Token is valid, but the `PHONE_NUMBER_ID` check fails with **`does not exist, cannot be loaded due to missing permissions`** even though the ID is right | The WhatsApp account isn't assigned to the system user, or the token predates the assignment | Section 6c, then generate a new token (6d) |
 | **`(#133010) Account not registered`** | The number isn't registered with the Cloud API | Section 7 |
+| Register fails with **`133005`** (PIN mismatch) | The number already has a two-step PIN and you sent a different one | Use the PIN you set before. If it's lost, reset two-step verification for the number in WhatsApp Manager |
+| Register fails with **`133016`** | More than 10 register calls in 72 hours | Wait out the 72-hour block. Fix the underlying error before trying again |
+| `hello_world` fails with **`131030`** (recipient not in allowed list) | Your number isn't on the test number's recipient list, or isn't verified yet | Section 8 |
 | Phone says the test number **isn't on WhatsApp** | Unregistered number, or you tried to message a test number first | Section 7, then section 12 (send `hello_world` first) |
 | **Verify and save** fails in Meta | Worker not deployed yet, URL wrong (needs `/webhook`), or `VERIFY_TOKEN` differs between Meta and Cloudflare | Section 14 webhook-token check; re-upload secrets (11) |
 | You message the bot and **nothing happens**, and `wrangler tail` shows no requests | Meta isn't delivering: no **messages** field subscribed, or the app isn't in the WABA's **subscribed apps** | Sections 9 and 10. Check both with section 14 |
@@ -405,13 +421,15 @@ The `debug_token` check puts the token in the URL. That's how Meta's endpoint wo
 | The bot receives messages but **never replies**, and the log shows `WhatsApp send failed` | Wrong `PHONE_NUMBER_ID` or token, or your number isn't on the recipient list | Sections 5, 6 and 8 |
 | The bot **ignores you** but the log shows requests | Your number in `ALLOWED_NUMBERS` differs from the one WhatsApp reports (country code, extra digits) | Digits only, with country code: `447700900123` |
 | `curl` to the Worker shows **`000`** right after the first deploy | A new `*.workers.dev` subdomain is still propagating | Wait a few minutes (section 3) |
+| **`cd: no such file or directory: bot`** | You're already in `bot/` | Every command after section 2 runs in `bot/`; drop the `cd` |
+| **`defining function based on alias`** or **`graph: command not found`** | A shell alias with the same name as the helper function | The guide uses `function graph { … }`, which aliases can't break. Paste the helper again exactly as written |
 | `voz sync: could not reach the bot` | Wrong `VOZLOCAL_BOT_URL` or `VOZLOCAL_BOT_TOKEN`, or you're offline | Section 13; the sync-token check in section 14 |
 
 ---
 
 ## 16. Moving from the test number to a real one
 
-The test number is fine for personal use with up to 5 recipients. To use your own number instead (it must not be active on the WhatsApp app at the same time):
+The test number is fine for personal use with a few recipients. To use your own number instead (it must not be active on the WhatsApp app at the same time):
 
 1. On the Quickstart page, use **Add phone number**. Set a display name, which Meta reviews, and verify the number by SMS or voice call.
 2. Register it (section 7) with a new PIN.

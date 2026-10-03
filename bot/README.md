@@ -45,13 +45,13 @@ One phrase per message: `phrase = meaning` or `phrase | meaning`. Anything else 
 
 The short version, for when you've done it before:
 
-1. **Cloudflare:** `npm install`, `npx wrangler login`, `npx wrangler d1 create vozlocal` (paste the id into `wrangler.toml`), `npx wrangler d1 migrations apply vozlocal --remote`, `npx wrangler deploy`.
+1. **Cloudflare:** in `bot/`, `cp .dev.vars.example .dev.vars` and fill in your number, `VERIFY_TOKEN` and `SYNC_TOKEN`. Then run `npm install`, `npx wrangler login` and `npx wrangler d1 create vozlocal` (paste the id into `wrangler.toml`), then `npx wrangler d1 migrations apply vozlocal --remote` and `npx wrangler deploy`. Upload `VERIFY_TOKEN` (`npx wrangler secret put VERIFY_TOKEN`) before step 5: Meta checks it.
 2. **Meta app:** create one with the **Connect with customers through WhatsApp** use case. Note the **Phone number ID** (not the number), the **WhatsApp Business Account ID** and the **App secret**.
 3. **System user** (business.facebook.com): assign it the app *and* the WhatsApp account, both with full control. Then generate a never-expiring token with `whatsapp_business_messaging` and `whatsapp_business_management`.
-4. **Register** the number (`POST /<phone number id>/register` with a PIN) and add your own number to the test number's recipient list.
+4. **Register** the number if sending fails with `133010` (`POST /<phone number id>/register` with a PIN), and add your own number to the test number's recipient list.
 5. **Webhook:** callback `https://vozlocal-bot.<you>.workers.dev/webhook` with your verify token. Subscribe the **messages** field, and link the app to the WhatsApp account (`POST /<waba id>/subscribed_apps`).
-6. **Keys:** fill in `bot/.dev.vars` (see `.dev.vars.example`) and upload them with `npx wrangler secret bulk`.
-7. **First message:** send yourself the `hello_world` template (you can't message a test number first), then reply `phrase = meaning`.
+6. **Keys:** finish `bot/.dev.vars` and upload it: `npx wrangler secret bulk .dev.vars`.
+7. **First message:** have the test number send you the `hello_world` template, then reply `phrase = meaning` in that chat.
 8. **Terminal:** set `VOZLOCAL_BOT_URL` and `VOZLOCAL_BOT_TOKEN` in `~/.zshrc` above the plugin's `source` line.
 
 ## Endpoints
