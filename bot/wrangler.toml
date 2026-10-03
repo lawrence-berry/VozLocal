@@ -5,11 +5,11 @@ compatibility_date = "2026-09-01"
 [vars]
 GRAPH_VERSION = "v26.0"
 
-# `npx wrangler d1 create vozlocal` prints the id to paste here.
+# From `npx wrangler d1 create vozlocal`. To run your own copy, create a database and replace this id.
 [[d1_databases]]
 binding = "DB"
 database_name = "vozlocal"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "6428e28f-05eb-41bf-aab0-bac92040f428"
 migrations_dir = "migrations"
 
 # Secrets, set with `npx wrangler secret put <NAME>` (locally: .dev.vars, see .dev.vars.example):
