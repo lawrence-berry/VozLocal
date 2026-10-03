@@ -7,7 +7,7 @@ ARG PLAYWRIGHT=1.63.0
 RUN apt-get update \
  && apt-get install -y --no-install-recommends nodejs npm \
  && npm install -g playwright@$PLAYWRIGHT \
- && playwright install --with-deps chromium \
+ && playwright install --with-deps --no-shell chromium \
  && rm -rf /var/lib/apt/lists/* /root/.npm
 
 WORKDIR /app/chrome

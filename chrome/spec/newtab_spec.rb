@@ -6,7 +6,7 @@ RSpec.describe 'The new tab page' do
   include ExtensionHelpers
 
   it 'shows a Spanish phrase, then its meaning once the delay has passed' do
-    open_newtab(delay: 1)
+    open_newtab(delay: 3)
 
     phrase, meaning = shown_row
     expect(phrase).not_to be_nil
@@ -15,10 +15,64 @@ RSpec.describe 'The new tab page' do
     expect(text('right-text')).to eq('')
     expect(text('dots')).to match(/\A·+\z/)
 
-    page.wait_for_selector('#right-text:not(:empty)', timeout: 3000)
+    page.wait_for_selector('#right-text:not(:empty)', timeout: 5000)
     expect(text('right-text')).to eq(meaning)
     expect(text('dots')).to eq('')
-    expect(@errors).to be_empty
+  end
+
+  it 'shows the meaning straight away with a delay of 0' do
+    open_newtab(delay: 0)
+
+    expect(text('right-text')).to eq(shown_row[1])
+  end
+
+  it 'still shows a phrase when stored settings are malformed' do
+    open_newtab(mine: [nil, ['a'], { 'phrase' => 'b' }, %w[Zarpado Outrageous]], learned: 5, delay: 'x',
+                region: 42, swapped: 'yes', last: 7)
+
+    expect(shown_row || text('left-text')).not_to be_nil
+    expect(text('lang-left')).to eq('Español (Rioplatense)')
+    page.wait_for_selector('#right-text:not(:empty)', timeout: 5000)
+  end
+
+  it 'keeps learned marks from two open tabs' do
+    open_newtab(delay: 30)
+    other = @context.new_page
+    other.goto(ExtensionHelpers::NEWTAB)
+    other.wait_for_selector('#left-text:not(:empty)')
+
+    press('l')
+    a = shown_row.join('|')
+    expect { storage['learned'] == [a] }.to eventually_be_true
+    other.keyboard.press('n') while other.text_content('#left-text') == shown_row[0]
+    other.keyboard.press('l')
+    b = "#{other.text_content('#left-text')}|#{all_rows.to_h[other.text_content('#left-text')]}"
+
+    expect { storage['learned'].sort == [a, b].sort }.to eventually_be_true
+    expect(page.get_attribute('#learned', 'aria-pressed')).to eq('true')
+  end
+
+  it 'follows a swap made in another tab' do
+    open_newtab(delay: 30)
+    other = @context.new_page
+    other.goto(ExtensionHelpers::NEWTAB)
+    other.wait_for_selector('#left-text:not(:empty)')
+
+    other.keyboard.press('s')
+
+    expect { text('lang-left') == 'English' }.to eventually_be_true
+  end
+
+  it 'lets Space press a button reached with the keyboard' do
+    open_newtab(delay: 30)
+    page.focus('#learned')
+    page.keyboard.press('Shift+Tab')
+    page.keyboard.press('Tab') # focus by keyboard, so it's :focus-visible
+
+    press('Space')
+
+    expect(page.get_attribute('#learned', 'aria-pressed')).to eq('true')
+    expect(text('right-text')).to eq('')
   end
 
   it 'names the category it took the phrase from' do

@@ -21,7 +21,6 @@ Playwright.create(playwright_cli_executable_path: 'playwright') do |playwright|
     SIZES.each do |size|
       page = browser.new_page(viewport: { width: size, height: size })
       page.set_content(%(<body style="margin:0"><img src="#{svg}" width="#{size}" height="#{size}"></body>))
-      page.wait_for_load_state(state: 'load')
       path = File.join(DIR, "icon#{size}.png")
       page.screenshot(path: path, omitBackground: true)
       page.close

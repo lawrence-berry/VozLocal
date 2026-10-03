@@ -97,6 +97,10 @@ main {
   color: var(--accent);
   font-weight: 500;
   border-bottom: 2px solid var(--accent);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .panels {

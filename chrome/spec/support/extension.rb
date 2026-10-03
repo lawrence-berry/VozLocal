@@ -31,6 +31,7 @@ module ExtensionHelpers
           @requests = []
           @context.on('request', ->(request) { @requests << request.url })
           example.run
+          expect(@errors).to be_empty, "console errors: #{@errors}"
         ensure
           @context&.close
         end
