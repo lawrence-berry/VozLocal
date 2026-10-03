@@ -84,8 +84,9 @@ yas() {
   # Regular files only: a directory there would print an error and a FIFO would hang $(<…).
   [[ -f $dir/last_phrase && -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
   [[ -n $last ]] || { print -u2 "yas: no phrase to mark yet, run voz first"; return 1 }
-  [[ -f $dir/learned && -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
-  [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned
+  [[ -f $dir/learned || ! -e $dir/learned ]] || { print -u2 "yas: $dir/learned isn't a regular file"; return 1 }
+  [[ -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
+  [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned || return 1
   print -r -- "  ✓ learned: ${last%%|*}"
 }
 

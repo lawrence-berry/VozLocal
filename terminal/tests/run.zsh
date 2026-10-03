@@ -107,12 +107,35 @@ check "a directory where last_phrase should be is ignored" \
 check "yas with a directory where last_phrase should be fails with a message" \
   "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; yas; print rc=\$?")" $'yas: no phrase to mark yet, run voz first\nrc=1'
 
-# A FIFO would block a read forever; the watchdog kills the shell after 5s so a regression fails instead of hanging.
-rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal; mkfifo $TMP/norepeat/vozlocal/{last_phrase,learned}
-check "a FIFO where last_phrase or learned should be doesn't hang voz or yas" \
-  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; { sleep 5; kill \$\$ } >/dev/null 2>&1 &!; voz >/dev/null; print voz=\$?; yas; print yas=\$?; kill \$! 2>/dev/null")" \
+# Opening a FIFO blocks until its other end is opened. After 5s the watchdog marks the run as hung and keeps
+# opening every FIFO read-write until it's stopped. That frees whatever is blocked on either end, even an orphaned
+# child, so a regression fails instead of hanging the suite.
+fifo_run() {  # fifo_run <cache dir> <command>
+  local d=$1/vozlocal out
+  { sleep 5; : > $1/hung; while :; do for f in $d/*(Np); do : <>$f; done; sleep 0.2; done } >/dev/null 2>&1 &!
+  local watchdog=$!
+  out=$(run "XDG_CACHE_HOME=${(q)1}; $2")
+  kill $watchdog 2>/dev/null
+  [[ -e $1/hung ]] && out+=$'\nHUNG'
+  print -r -- $out
+}
+
+F=$TMP/fifo
+rm -rf $F; mkdir -p $F/vozlocal; mkfifo $F/vozlocal/{last_phrase,learned}
+check "a FIFO where last_phrase and learned should be doesn't hang voz or yas" \
+  "$(fifo_run $F 'voz >/dev/null; print voz=$?; yas; print yas=$?')" \
   $'voz=0\nyas: no phrase to mark yet, run voz first\nyas=1'
-rm -rf $TMP/norepeat
+
+rm -rf $F; mkdir -p $F/vozlocal; mkfifo $F/vozlocal/learned
+check "yas with a FIFO where learned should be fails instead of hanging" \
+  "$(fifo_run $F 'voz >/dev/null; print voz=$?; yas; print yas=$?')" \
+  $'voz=0\nyas: */learned isn\'t a regular file\nyas=1'
+
+rm -rf $F; mkdir -p $F/vozlocal/learned
+check "yas with a directory where learned should be fails with a message" \
+  "$(run "XDG_CACHE_HOME=${(q)F}; voz >/dev/null; yas; print rc=\$?")" \
+  $'yas: */learned isn\'t a regular file\nrc=1'
+rm -rf $F
 
 # --- yas ---
 

@@ -361,17 +361,18 @@ Your reply opens a 24-hour window in which the bot's replies are free ([Meta pri
 
 ## 13. Point the terminal at the bot
 
-The token is a secret, so keep it out of `~/.zshrc` (which you may want to back up or publish). Put it in a file of its own that only you can read:
+The token is a secret, so keep it out of `~/.zshrc` (which you may want to back up or publish). Put it in a file of its own that only you can read. `read -s` asks for the token without echoing it, so it doesn't end up in your shell history:
 
-```sh
+```zsh
 mkdir -p ~/.secrets && chmod 700 ~/.secrets
-print -r -- 'export VOZLOCAL_BOT_TOKEN=<your SYNC_TOKEN>' > ~/.secrets/vozlocal.zsh
+read -rs 'tok?SYNC_TOKEN: ' && print
+(umask 077; print -r -- "export VOZLOCAL_BOT_TOKEN=$tok" > ~/.secrets/vozlocal.zsh); unset tok
 chmod 600 ~/.secrets/vozlocal.zsh
 ```
 
 Then in `~/.zshrc`, **above** the line that sources the plugin (the plugin reads these as it loads), load the secrets and set the URL:
 
-```sh
+```zsh
 for _secret in ~/.secrets/*.zsh(N); do source $_secret; done; unset _secret
 export VOZLOCAL_BOT_URL=https://vozlocal-bot.<you>.workers.dev
 ```
