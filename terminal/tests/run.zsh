@@ -66,12 +66,44 @@ check "countdown shows one dot per quarter second" \
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"
 
-shown=( ${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat VOZLOCAL_REGION=two; repeat 30 { voz | head -1 }")"} )
-repeats=0; for (( i = 2; i <= $#shown; i++ )); [[ $shown[i] == $shown[i-1] ]] && (( ++repeats ))
-check "voz never shows the same phrase twice in a row when there's another" "$#shown repeats=$repeats" "30 repeats=0"
+# Phrase lines (the bold first line of each voz) from n calls in a row, one per element.
+# voz runs directly, not in a pipeline: a subshell per call would give every call the same $RANDOM.
+voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;36m*} }
+no_repeats() {  # no_repeats <lines…>: "<count> repeats=<consecutive equal pairs>"
+  integer i r=0; for (( i = 2; i <= $#; i++ )); [[ ${(P)i} == ${(P)$((i - 1))} ]] && (( ++r )); print "$# repeats=$r"
+}
 
+rm -rf $TMP/norepeat
+check "voz never shows the same phrase twice in a row when there's another" \
+  "$(no_repeats ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"})" "30 repeats=0"
+
+mkdir -p $TMP/data/three && print "phrase|translation\nuno|one\ndos|two\ntres|three" > $TMP/data/three/three.psv
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "uno|one" > $TMP/norepeat/vozlocal/learned
+lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=three 30)"} )
+check "voz avoids both learned phrases and the last one" \
+  "$(no_repeats $lines) uno=${#${(M)lines:#*uno*}}" "30 repeats=0 uno=0"
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "uno|one\ndos|two" > $TMP/norepeat/vozlocal/learned
+check "voz avoids the last phrase even when every phrase is learned" \
+  "$(no_repeats ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"})" "30 repeats=0"
+
+print "phrase|translation\nsiete|seven" > $TMP/data/two/mine.psv; rm -rf $TMP/norepeat
+lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"} )
+check "a mine.psv phrase counts as the last one too" \
+  "$(no_repeats $lines) siete=$(( ${#${(M)lines:#*siete*}} > 0 ))" "30 repeats=0 siete=1"
+rm -f $TMP/data/two/mine.psv; rm -rf $TMP/data/three
+
+rm -rf $TMP/norepeat
 check "voz still shows a category's only phrase every time" \
-  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; repeat 3 voz")" "(*hola*→ hello[[:space:]]#)(#c3)"
+  "$(voz_lines VOZLOCAL_REGION=test 3)" $'*hola*\n*hola*\n*hola*~*\n*\n*\n*'
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal
+print -rn -- "${(l:3000000::x:)}|y" > $TMP/norepeat/vozlocal/last_phrase
+check "a huge last phrase doesn't break voz" "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; voz; print rc=\$?")" "*→ hello*rc=0"
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal/last_phrase
+check "a directory where last_phrase should be is ignored" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; voz 2>&1 | grep -c 'is a directory'")" "0"
 rm -rf $TMP/norepeat
 
 # --- yas ---
