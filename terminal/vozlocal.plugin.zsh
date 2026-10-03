@@ -119,7 +119,7 @@ _vozlocal_install_chrome() {
     rm -f $manifest $launcher && print "voz: Chrome no longer shares with the terminal"; return
   fi
   [[ -z $1 ]] || { print -u2 "usage: voz install-chrome [--remove]"; return 1 }
-  [[ $launcher != *[\"\\]* ]] || { print -u2 "voz: can't write a path holding \" or \\ into JSON: $launcher"; return 1 }
+  [[ $launcher != *[\"\\[:cntrl:]]* ]] || { print -u2 "voz: can't write a path holding \", \\ or control characters into JSON: $launcher"; return 1 }
   mkdir -p $hosts || return 1
   {
     print -r -- '#!/bin/zsh -f'
@@ -140,17 +140,24 @@ _vozlocal_install_chrome() {
 
 # voz install-cron: run voz sync every 15 minutes, so phrases from the WhatsApp bot reach mine.psv (and Chrome)
 # even when no terminal is open. It runs an interactive zsh, so it sees the same settings and secrets you do.
-# --remove undoes it.
+# The last run's output is kept in cron.log in the cache folder. --remove undoes it.
 _vozlocal_install_cron() {
   emulate -L zsh
-  local tag='# vozlocal sync' current
+  local tag='# vozlocal sync' current log=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal/cron.log
   [[ -z $1 || $1 == --remove ]] || { print -u2 "usage: voz install-cron [--remove]"; return 1 }
-  current=$(crontab -l 2>/dev/null)
-  local -a lines=( ${(f)current} )
-  lines=( ${lines:#*"$tag"} )
-  [[ $1 == --remove ]] || lines+=( "*/15 * * * * /bin/zsh -ic 'voz sync' >/dev/null 2>&1 $tag" )
+  # Only "no crontab" means an empty table. Any other failure must not be taken as one, or the jobs would be lost.
+  if ! current=$(crontab -l 2>&1); then
+    [[ $current == *'no crontab'* ]] || { print -u2 "voz: couldn't read your crontab, so it's unchanged: $current"; return 1 }
+    current=
+  fi
+  [[ $log != *[[:cntrl:]%]* ]] || { print -u2 "voz: can't put this path in a crontab: $log"; return 1 }
+  mkdir -p ${log:h} || return 1
+  local -a lines=( "${(@f)current}" )
+  lines=( "${(@)lines:#*$tag}" )
+  (( $#lines )) && [[ -z $lines[-1] ]] && lines[-1]=()  # nothing read gives one empty line
+  [[ $1 == --remove ]] || lines+=( "*/15 * * * * /bin/zsh -ic 'voz sync' >| ${(q)log} 2>&1 $tag" )
   if (( $#lines )); then
-    print -rl -- $lines | crontab - || return 1
+    print -rl -- "${(@)lines}" | crontab - || return 1
   else
     crontab -r 2>/dev/null
   fi

@@ -71,9 +71,12 @@ if [[ $op == learn ]]; then
   [[ $msg =~ '"key":"(([0-9a-f][0-9a-f])+)"' ]] && keyhex=$match[1] || fail 'bad key'
   [[ $msg =~ '"on":(true|false)' ]] && on=$match[1] || fail 'bad on'
   key=${(g::)keyhex//(#b)(??)/\\x$match[1]}
-  [[ $key != *$'\n'* && $key == *'|'* ]] || fail 'bad key'
+  [[ $key != *[[:cntrl:]]* && $key == *'|'* ]] || fail 'bad key'
+  [[ -L $learned ]] && learned=${learned:A}  # change the file a symlink points to, not the link
   [[ -f $learned || ! -e $learned ]] || fail 'learned is not a regular file'
-  mkdir -p $dir && : >> $dir/learned.lock && zsystem flock -t 5 -f lock $dir/learned.lock || fail 'learned is locked'
+  # Wait at most a second for yas: the extension gives up after 1.5, and a change it gave up on mustn't land.
+  [[ -f $dir/learned.lock || ! -e $dir/learned.lock ]] || fail 'learned.lock is not a regular file'
+  mkdir -p $dir && : >> $dir/learned.lock && zsystem flock -t 1 -f lock $dir/learned.lock || fail 'learned is locked'
   local -a lines
   [[ -r $learned ]] && lines=( ${(f)"$(<$learned)"} )
   if [[ $on == true ]]; then
@@ -88,7 +91,7 @@ fi
 
 local -a hex learned_hex mine_hex
 hex_lines $learned 1; learned_hex=( $hex )
-hex_lines $VOZLOCAL_HOME/data/$region/mine.psv 2; mine_hex=( ${(M)hex:#*7c*} )  # 7c is |
+hex_lines $VOZLOCAL_HOME/data/$region/mine.psv 2; mine_hex=( ${(M)hex:#(??)#7c*} )  # holds the byte 7c, a |
 
 reply="{\"ok\":true,\"learned\":$(json_list $learned_hex),\"mine\":$(json_list $mine_hex)}"
 (( ${#reply} <= MAX_REPLY )) || fail 'too much to send'

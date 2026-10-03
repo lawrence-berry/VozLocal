@@ -54,6 +54,14 @@ module ExtensionHelpers
   def learned_file = File.join(terminal_cache, 'vozlocal', 'learned')
   def learned_lines = File.exist?(learned_file) ? File.read(learned_file).lines(chomp: true) : []
 
+  # Make the host take `seconds` to answer, as a busy machine might.
+  def slow_host(seconds)
+    target = File.join(terminal_home, 'vozlocal-host')
+    File.delete(target)
+    File.write(target, "#!/bin/zsh -f\nsleep #{seconds}\nexec #{File.join(TERMINAL, 'vozlocal-host')}\n")
+    File.chmod(0o755, target)
+  end
+
   def write_terminal(learned: [], mine: [])
     FileUtils.mkdir_p([File.dirname(learned_file), File.join(terminal_home, 'data', 'es_AR')])
     File.write(learned_file, learned.map { |line| "#{line}\n" }.join)

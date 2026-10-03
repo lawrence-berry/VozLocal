@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, readHostReply, toHex, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -116,17 +116,17 @@ test('the bundled phrases are well formed', () => {
 
 test('cleanSettings keeps good values', () => {
   const good = { region: 'es_AR', delay: 0, learned: ['a|b'], last: 'a|b', mine: [['c', 'd']], swapped: true,
-    pending: [{ key: 'a|b', on: false }] };
+    pending: [{ key: 'a|b', on: false, at: 5 }], linked: true };
   assert.deepEqual(cleanSettings(good), good);
 });
 
 test('cleanSettings replaces malformed values with defaults', () => {
-  const defaults = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [] };
+  const defaults = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [], linked: false };
   assert.deepEqual(cleanSettings(undefined), defaults);
   assert.deepEqual(cleanSettings(null), defaults);
-  assert.deepEqual(cleanSettings({ region: 5, delay: 31, learned: 5, last: 7, mine: 'x', swapped: 'yes', pending: 1 }), defaults);
-  assert.deepEqual(cleanSettings({ pending: [null, { key: 'a|b' }, { key: '', on: true }, { key: 'c|d', on: true }] }).pending,
-    [{ key: 'c|d', on: true }]);
+  assert.deepEqual(cleanSettings({ region: 5, delay: 31, learned: 5, last: 7, mine: 'x', swapped: 'yes', pending: 1, linked: 1 }), defaults);
+  assert.deepEqual(cleanSettings({ pending: [null, { key: 'a|b', at: 1 }, { key: '', on: true, at: 1 }, { key: 'x|y', on: true },
+    { key: 'c|d', on: true, at: 2 }] }).pending, [{ key: 'c|d', on: true, at: 2 }]);
   assert.deepEqual(cleanSettings({ delay: 1.5 }).delay, 2);
   assert.deepEqual(cleanSettings({ delay: -1 }).delay, 2);
   assert.deepEqual(cleanSettings({ learned: ['a|b', null, 3, ''] }).learned, ['a|b']);
@@ -157,4 +157,17 @@ test('readHostReply refuses a failed or malformed reply', () => {
   for (const reply of [undefined, null, {}, { ok: false, error: 'bad region' }, { ok: true, learned: 'x', mine: [] }]) {
     assert.equal(readHostReply(reply), null);
   }
+});
+
+test('queueMark keeps only the latest mark for each phrase', () => {
+  let pending = queueMark([], 'a|b', true, 1);
+  pending = queueMark(pending, 'c|d', true, 2);
+  pending = queueMark(pending, 'a|b', false, 3);
+  assert.deepEqual(pending, [{ key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }]);
+});
+
+test('withoutSent drops only the marks that were sent', () => {
+  const sent = [{ key: 'a|b', on: true, at: 1 }];
+  const now = [...sent, { key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }];
+  assert.deepEqual(withoutSent(now, sent), [{ key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }]);
 });

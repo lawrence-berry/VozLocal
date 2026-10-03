@@ -29,7 +29,11 @@ From then on, both read the same files:
 
 If you move the repo, run `voz install-chrome` again.
 
-**When it isn't linked.** The page says "Not shared with the terminal" at the bottom right and keeps working on its own copy. Marks made then are sent to the terminal on the first new tab after it's linked again.
+**The first time it links,** any phrases you marked ✓ in Chrome before are added to the terminal's learned file, so nothing is lost.
+
+**When it isn't linked.** The page says "Not shared with the terminal" at the bottom right, with the reason, and keeps working on its own copy. Marks made then are sent to the terminal on the first new tab after it's linked again.
+
+**Speed.** Each new tab waits up to 0.4 s for the terminal's answer, which usually takes a few dozen milliseconds. If it's slower, the page shows what it already has and takes the answer when it comes.
 
 ## Using it
 

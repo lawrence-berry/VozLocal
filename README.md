@@ -127,7 +127,7 @@ echo 'source ~/VozLocal/terminal/vozlocal.plugin.zsh' >> ~/.zshrc
 | `yas` | Marks the last phrase shown as learned, so it stops coming up |
 | `voz sync` | Fetches phrases you've confirmed in the WhatsApp bot (also runs in the background when a terminal opens) |
 | `voz install-chrome` | Lets the Chrome extension share learned phrases and WhatsApp phrases with the terminal. Run it again if you move the repo; `--remove` undoes it |
-| `voz install-cron` | Runs `voz sync` every 15 minutes, so new WhatsApp phrases reach Chrome even when no terminal is open; `--remove` undoes it |
+| `voz install-cron` | Runs `voz sync` every 15 minutes, so new WhatsApp phrases reach Chrome even when no terminal is open. The last run's output is in `~/.cache/vozlocal/cron.log`. macOS may ask you to let your terminal change the crontab the first time; `--remove` undoes it |
 
 ---
 

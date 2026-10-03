@@ -342,6 +342,28 @@ check "a FIFO where learned should be doesn't hang the host" \
   "$(host $STATE; learn 'Bondi|Bus' true)" \
   "$(lit "{\"ok\":true,\"learned\":[],\"mine\":[\"$(hex 'Bondi|Bus')\"]}{\"ok\":false,\"error\":\"learned is not a regular file\"}")"
 
+host_reset
+check "the host refuses a key holding a control character" \
+  "$(host '{"op":"learn","region":"es_AR","key":"00417c42","on":true}')" "$(lit '{"ok":false,"error":"bad key"}')"
+
+host_reset; mkfifo $H/cache/vozlocal/learned.lock
+check "a FIFO where learned.lock should be doesn't hang the host" \
+  "$(learn 'Bondi|Bus' true)" "$(lit '{"ok":false,"error":"learned.lock is not a regular file"}')"
+
+host_reset; mv $H/cache/vozlocal/learned $H/real-learned; ln -s $H/real-learned $H/cache/vozlocal/learned
+learn 'Bondi|Bus' true >/dev/null; learn 'Che|Hey' false >/dev/null
+check "a symlinked learned stays a symlink, and its target changes" \
+  "$([[ -L $H/cache/vozlocal/learned ]] && print link); $(<$H/real-learned)" "$(lit 'link; Bondi|Bus')"
+
+host_reset; print "phrase|translation\ngá|y" > $H/home/data/es_AR/mine.psv
+check "a mine.psv line is sent only if it holds a real |" "$(host $STATE)" "*\"mine\":\\[\"$(hex 'gá|y')\"\\]*"
+print "phrase|translation\ngá" > $H/home/data/es_AR/mine.psv
+check "...and a line whose bytes merely contain 7c isn't" "$(host $STATE)" "*\"mine\":\\[\\]*"
+
+host_reset; repeat 6000 print -r -- "$(printf 'x%.0s' {1..90})|y" >> $H/cache/vozlocal/learned
+check "the host refuses to send more than Chrome takes" "$(host $STATE)" "$(lit '{"ok":false,"error":"too much to send"}')"
+
+host_reset
 host_reset; print -r -- 'Bondi|Bus' >> $H/cache/vozlocal/learned
 check "yas and the host share one learned file" \
   "$(run "XDG_CACHE_HOME=${(q)H}/cache; print -r -- 'Guita|Money' > \$XDG_CACHE_HOME/vozlocal/last_phrase; yas >/dev/null"; host $STATE)" \
@@ -363,12 +385,30 @@ check "the launcher it writes runs the host with this shell's paths" \
 check "install-chrome --remove takes both files away" \
   "$(run "VOZLOCAL_CHROME_HOSTS=${(q)C}; voz install-chrome --remove"; ls -A $C)" "voz: Chrome no longer shares with the terminal"
 
-# A stand-in crontab that keeps the table in a file.
-CRON="crontab() { if [[ \$1 == -l ]]; then cat ${(q)TMP}/crontab 2>/dev/null; elif [[ \$1 == -r ]]; then rm -f ${(q)TMP}/crontab; else cat > ${(q)TMP}/crontab; fi }"
-print '0 9 * * * other job' > $TMP/crontab
+# A stand-in crontab that keeps the table in a file, and says "no crontab" like the real one when there's none.
+CRON="crontab() {
+  case \$1 in
+    -l) [[ -e ${(q)TMP}/crontab ]] && cat ${(q)TMP}/crontab || { print -u2 'crontab: no crontab for you'; return 1 } ;;
+    -r) rm -f ${(q)TMP}/crontab ;;
+    *) cat > ${(q)TMP}/crontab ;;
+  esac
+}"
+CRONLOG=$TMP/cache/vozlocal/cron.log
+print '0 9 * * * other job\n\n# a comment' > $TMP/crontab
 check "install-cron adds one sync line and keeps other jobs, however often it runs" \
   "$(run "$CRON; voz install-cron; voz install-cron" >/dev/null; cat $TMP/crontab)" \
-  "$(lit $'0 9 * * * other job\n*/15 * * * * /bin/zsh -ic \'voz sync\' >/dev/null 2>&1 # vozlocal sync')"
+  "$(lit $'0 9 * * * other job\n\n# a comment\n*/15 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
+
+rm -f $TMP/crontab
+check "install-cron starts a crontab when there's none" \
+  "$(run "$CRON; voz install-cron" >/dev/null; grep -c "^\*/15 .* # vozlocal sync\$" $TMP/crontab; wc -l < $TMP/crontab | tr -d ' ')" $'1\n1'
+
+print '0 9 * * * other job' > $TMP/crontab
+check "install-cron leaves the table alone if it can't read it" \
+  "$(run "$CRON; crontab() { [[ \$1 == -l ]] && { print -u2 'crontab: permission denied'; return 1 }; print -r -- WROTE > ${(q)TMP}/crontab }
+          voz install-cron; print rc=\$?; voz install-cron --remove; print rc=\$?"; cat $TMP/crontab)" \
+  "*couldn't read your crontab*permission denied*rc=1*couldn't read*rc=1*0 9 \\* \\* \\* other job"
+print '0 9 * * * other job' > $TMP/crontab
 check "install-cron --remove takes the line away" \
   "$(run "$CRON; voz install-cron --remove" >/dev/null; cat $TMP/crontab)" "$(lit '0 9 * * * other job')"
 check "install-cron --remove on the only line clears the table" \

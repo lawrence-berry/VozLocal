@@ -51,7 +51,7 @@ export function todaysRows(region, mine, day) {
   return { category, rows: [...region[category], ...mine] };
 }
 
-const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [] };
+const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [], linked: false };
 const isText = v => typeof v === 'string' && v !== '';
 
 // Stored settings with anything malformed replaced by its default, so a bad value (a sync gone wrong, an old
@@ -65,8 +65,22 @@ export function cleanSettings(stored = {}) {
     last: isText(s.last) ? s.last : null,
     mine: Array.isArray(s.mine) ? s.mine.filter(r => Array.isArray(r) && r.length === 2 && r.every(isText)) : [],
     swapped: s.swapped === true,
-    pending: Array.isArray(s.pending) ? s.pending.filter(p => isText(p?.key) && typeof p.on === 'boolean') : [],
+    pending: Array.isArray(s.pending)
+      ? s.pending.filter(p => isText(p?.key) && typeof p.on === 'boolean' && Number.isFinite(p.at)) : [],
+    linked: s.linked === true,
   };
+}
+
+// Marks made while the terminal's host couldn't be reached wait in `pending`, oldest first. Only the latest mark
+// for a phrase matters, so a new one replaces any earlier one for the same phrase.
+export function queueMark(pending, key, on, at) {
+  return [...pending.filter(p => p.key !== key), { key, on, at }];
+}
+
+// What's left of `pending` once the marks in `sent` have reached the terminal. Marks queued since stay.
+export function withoutSent(pending, sent) {
+  const done = new Set(sent.map(p => `${p.at} ${p.on} ${p.key}`));
+  return pending.filter(p => !done.has(`${p.at} ${p.on} ${p.key}`));
 }
 
 // The terminal's host (vozlocal-host) sends phrases as hex of their UTF-8 bytes, so it never escapes JSON.

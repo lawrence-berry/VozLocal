@@ -39,13 +39,68 @@ RSpec.describe 'Sharing with the terminal' do
     expect(shown_row.join('|')).not_to eq(phrase) # learned (and shown last), so it isn't picked
   end
 
+  it 'hands over marks made in Chrome before it was linked' do
+    open_newtab(delay: 30)
+    press('l')
+    marked = shown_row.join('|')
+    press('n')
+    press('l')
+    expect { storage['learned']&.size == 2 }.to eventually_be_true
+    marks = storage['learned']
+
+    write_terminal(learned: ['Che|Hey'])
+    link_terminal
+    page.reload
+    page.wait_for_selector('#left-text:not(:empty)')
+
+    expect { learned_lines.sort == (['Che|Hey'] + marks).sort }.to eventually_be_true
+    expect(marks).to include(marked)
+    expect(storage['linked']).to be(true)
+  end
+
+  it "doesn't hand them over again after the terminal unlearns one", :terminal do
+    open_newtab(delay: 30)
+    press('l')
+    expect { learned_lines.size == 1 }.to eventually_be_true
+
+    File.write(learned_file, '') # unlearned in the terminal
+    page.reload
+    page.wait_for_selector('#left-text:not(:empty)')
+
+    expect { storage['learned'] == [] }.to eventually_be_true
+    expect(learned_lines).to eq([])
+  end
+
+  it 'shows a phrase at once when the terminal is slow, and takes its answer when it comes', :terminal do
+    write_terminal(learned: ['Che|Hey'])
+    slow_host(1)
+    started = Time.now
+    open_newtab(delay: 30)
+
+    expect(Time.now - started).to be < 1
+    expect(text('link')).to eq('')
+    expect { text('link') == 'Shared with the terminal' }.to eventually_be_true
+    expect(storage['learned']).to eq(['Che|Hey'])
+  end
+
+  it "says what went wrong when the terminal refuses", :terminal do
+    FileUtils.mkdir_p(File.join(terminal_cache, 'vozlocal'))
+    File.mkfifo(File.join(terminal_cache, 'vozlocal', 'learned.lock'))
+    open_newtab(delay: 30)
+
+    press('l')
+
+    expect { text('link') == 'Not shared with the terminal (learned.lock is not a regular file)' }.to eventually_be_true
+    expect(storage['pending'].map { |p| p['key'] }).to eq([shown_row.join('|')])
+  end
+
   it 'works without the terminal, and hands marks over once it is linked' do
     open_newtab(delay: 30)
     expect(text('link')).to eq('Not shared with the terminal: run voz install-chrome')
     phrase = shown_row.join('|')
 
     press('l')
-    expect { storage['pending'] == [{ 'key' => phrase, 'on' => true }] }.to eventually_be_true
+    expect { storage['pending']&.map { |p| [p['key'], p['on']] } == [[phrase, true]] }.to eventually_be_true
 
     link_terminal
     page.reload
