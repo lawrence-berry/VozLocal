@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const LANGS = { 'es-AR': 'Español (Rioplatense)', en: 'English' };
 const MAX_DOTS = 24; // a long delay still counts down, without filling the panel with dots
 const HOST = 'com.vozlocal.host';
-const HOST_WAIT_MS = 1500;  // per message to the host; it gives up on the learned lock sooner, after 1 s
+const HOST_WAIT_MS = 2000;  // per message to the host; it gives up on the learned lock sooner, after 1 s
 const FIRST_WAIT_MS = 400;  // how long the page waits for the terminal before showing what it already has
 
 let rows = [];

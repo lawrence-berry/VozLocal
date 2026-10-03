@@ -74,7 +74,7 @@ if [[ $op == learn ]]; then
   [[ $key != *[[:cntrl:]]* && $key == *'|'* ]] || fail 'bad key'
   [[ -L $learned ]] && learned=${learned:A}  # change the file a symlink points to, not the link
   [[ -f $learned || ! -e $learned ]] || fail 'learned is not a regular file'
-  # Wait at most a second for yas: the extension gives up after 1.5, and a change it gave up on mustn't land.
+  # Wait at most a second for yas: the extension gives up after 2, and a change it gave up on mustn't land.
   [[ -f $dir/learned.lock || ! -e $dir/learned.lock ]] || fail 'learned.lock is not a regular file'
   mkdir -p $dir && : >> $dir/learned.lock && zsystem flock -t 1 -f lock $dir/learned.lock || fail 'learned is locked'
   local -a lines
