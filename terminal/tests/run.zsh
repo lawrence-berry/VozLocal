@@ -3,7 +3,7 @@
 emulate -L zsh
 setopt extended_glob
 
-unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN  # user settings must not leak into the tests
+unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN NO_COLOR  # user settings must not leak into the tests
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
@@ -69,8 +69,8 @@ check "voz colours the phrase bold bright cyan and the countdown grey, as in the
   "${$(run 'VOZLOCAL_DELAY=1; voz')//$'\e'/<E>}" \
   "$(lit '<E>[1;38;5;81mhola<E>[0m')*$(lit '<E>[38;5;242m....<E>[0m')*$(lit '→ hello')"
 
-check "NO_COLOR turns the colours off" \
-  "$(run 'VOZLOCAL_DELAY=1; NO_COLOR=1; voz' | grep -c $'\e\\[[0-9;]*m')" "0"
+check "NO_COLOR turns the colours off, and still shows the phrase, dots and meaning" \
+  "${$(run 'VOZLOCAL_DELAY=1; NO_COLOR=1; voz')//$'\e'/<E>}" "hola*....*→ hello~*<E>\\[[0-9;]#m*"
 
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"

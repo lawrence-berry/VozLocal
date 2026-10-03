@@ -143,7 +143,7 @@ Everything is optional. Set these in your `~/.zshrc` **before** the `source` lin
 | `VOZLOCAL_BOT_URL` | *(unset)* | Your WhatsApp bot's address. Leave unset to keep VozLocal fully offline |
 | `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`, used by `voz sync`. It's a secret, so keep it in `~/.secrets/vozlocal.zsh` rather than `~/.zshrc` ([bot/SETUP.md section 13](bot/SETUP.md#13-point-the-terminal-at-the-bot)) |
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
-| `NO_COLOR` | *(unset)* | Set it to anything to print phrases without colour ([no-color.org](https://no-color.org)) |
+| `NO_COLOR` | *(unset)* | Set it to anything to turn off colour ([no-color.org](https://no-color.org)) |
 
 For example, for a longer pause and a phrase in every new tab:
 ```sh

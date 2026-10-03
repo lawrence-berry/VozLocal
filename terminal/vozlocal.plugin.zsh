@@ -70,7 +70,7 @@ voz() {
   [[ -f $dir/last_phrase || ! -e $dir/last_phrase ]] && mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
 
   _vozlocal_int VOZLOCAL_DELAY 2
-  trap 'printf "\r\e[K"; return 130' INT
+  trap 'printf "\e[0m\r\e[K"; return 130' INT
   # Colours as in the README's demo: the phrase bold bright cyan, the countdown dim grey. NO_COLOR turns them off.
   local hi= dim= off=
   [[ -z $NO_COLOR ]] && hi=$'\e[1;38;5;81m' dim=$'\e[38;5;242m' off=$'\e[0m'
