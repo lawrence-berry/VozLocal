@@ -57,9 +57,11 @@ export async function handle(db, message) {
   const sender = digits(message.from);
   const text = message.type === 'text' ? String(message.text?.body ?? '').trim() : '';
   const clearPending = () => db.prepare('DELETE FROM pending WHERE sender = ?').bind(sender).run();
-  // A preview older than PENDING_TTL has lapsed, so a stray yes days later can't save it.
+  // A preview older than PENDING_TTL has lapsed, so a stray yes days later can't save it. Measured from when
+  // WhatsApp says the message was sent, so a yes that Meta retries hours later still counts.
+  const sentAt = /^\d+$/.test(message.timestamp ?? '') ? Math.min(Number(message.timestamp), now()) : now();
   const pending = await db.prepare('SELECT phrase, translation FROM pending WHERE sender = ? AND created_at >= ?')
-    .bind(sender, now() - PENDING_TTL).first();
+    .bind(sender, sentAt - PENDING_TTL).first();
 
   if (pending && YES.test(text)) {
     // Store before clearing: if the store fails, Meta retries the yes and the pending phrase is still there.

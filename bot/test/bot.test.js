@@ -38,8 +38,8 @@ beforeEach(() => {
 });
 
 let nextId = 0;
-function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}`, ctx } = {}) {
-  const message = { from, id, type, ...(type === 'text' ? { text: { body: text } } : {}) };
+function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}`, ctx, timestamp } = {}) {
+  const message = { from, id, type, ...(timestamp ? { timestamp } : {}), ...(type === 'text' ? { text: { body: text } } : {}) };
   const body = JSON.stringify({ entry: [{ changes: [{ value: { messages: [message] } }] }] });
   const sig = 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
   return worker.fetch(new Request('https://bot.test/webhook', { method: 'POST', body, headers: { 'X-Hub-Signature-256': sig } }), env, ctx);
@@ -173,4 +173,11 @@ test('old message ids are forgotten', async () => {
   await env.DB.prepare('INSERT INTO seen (message_id, created_at) VALUES (?, ?)').bind('wamid.old', 0).run();
   await say('Bondi = Bus');
   assert.equal(await env.DB.prepare('SELECT 1 FROM seen WHERE message_id = ?').bind('wamid.old').first(), null);
+});
+
+test('a yes sent in time but retried after the preview lapsed still saves', async () => {
+  await say('Bondi = Bus');
+  await env.DB.prepare('UPDATE pending SET created_at = created_at - 3600').run();
+  const sentAt = String(Math.floor(Date.now() / 1000) - 3300);  // 55 minutes after the preview
+  assert.equal(await say('yes', { timestamp: sentAt }), 'Saved: Bondi → Bus');
 });

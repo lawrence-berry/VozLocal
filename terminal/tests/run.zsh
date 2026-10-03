@@ -120,16 +120,25 @@ check "voz sync drops malformed and hostile rows" \
   "$(run "$S; voz sync"; cat $MINE $TMP/sync/vozlocal/sync_last_id)" $'voz sync: 1 new phrase\nphrase?translation\nok?fine\n3'
 
 for loc in C en_US.UTF-8; do
-  reset_sync; printf '1|ok|fine\n2|sí|yes\n3|c1\302\233x|x\n4|bidi\342\200\256x|x\n5|bom\357\273\277x|x\n6|zw\342\200\213x|x\n7|bad\377x|x\n8|nul\001x|x\n' > $TMP/reply
+  reset_sync; printf '1|ok|fine\n2|sí|yes\n3|c1\302\233x|x\n4|bidi\342\200\256x|x\n5|bom\357\273\277x|x\n6|zw\342\200\213x|x\n7|bad\377x|x\n8|shy\302\255x|x\n9|tag\363\240\201\201x|x\n10|alm\330\234x|x\n11|nul\001x|x\n' > $TMP/reply
   check "voz sync drops C1, bidi, zero-width and invalid UTF-8 rows ($loc)" \
     "$(run "$S; LC_ALL=$loc voz sync"; cat $MINE $TMP/sync/vozlocal/sync_last_id)" \
-    $'voz sync: 2 new phrases\nphrase?translation\nok?fine\nsí?yes\n8'
+    $'voz sync: 2 new phrases\nphrase?translation\nok?fine\nsí?yes\n11'
 done
 
 reset_sync; print "1|Bondi|Bus" > $TMP/reply
 check "voz sync works with mv, rm, mkdir and cat aliased" \
   "$(zsh -fc "alias mv='mv -i' rm='rm -i' mkdir='mkdir -v' cat='cat -n'; $SETUP; $S; voz sync; print '2|Che|Hey' >| \$VOZLOCAL_HOME/reply; voz sync </dev/null" 2>&1; command cat $MINE)" \
   $'voz sync: 1 new phrase\nvoz sync: 1 new phrase\nphrase?translation\nBondi?Bus\nChe?Hey'
+
+# Nothing may run while aliases are off: a Ctrl-C there would leave them off for the whole session.
+lines=( ${(f)"$(<$PLUGIN)"} )
+check "the plugin restores aliases before running anything at load" \
+  "${(j:/:)lines[-3,-1]}" "*'setopt' 'aliases'/*'unset' '_vozlocal_aliases'/_vozlocal_startup"
+
+reset_sync; mkdir -p $TMP/sync/vozlocal; touch $TMP/sync/vozlocal/sync.in.123 $MINE.tmp.123; print -n > $TMP/reply
+check "voz sync clears temp files left by a killed sync" \
+  "$(run "$S; voz sync"; print $TMP/sync/vozlocal/sync.in.*(N) $MINE.tmp.*(N))" "voz sync: up to date"
 
 check "sourcing the plugin leaves the user's aliases on" \
   "$(zsh -fc "alias ll='ls -l'; source ${(q)PLUGIN} >/dev/null; [[ -o aliases ]] && alias ll")" "ll='ls -l'"

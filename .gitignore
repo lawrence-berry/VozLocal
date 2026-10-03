@@ -2,4 +2,4 @@
 bot/node_modules/
 bot/.dev.vars
 bot/.wrangler/
-terminal/data/*/mine.psv
+terminal/data/*/mine.psv*

@@ -191,7 +191,7 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 43 checks in about 12 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 45 checks in about 12 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
 
 The WhatsApp bot has its own tests, which need only Node 22.5 or newer:
 

@@ -1,7 +1,8 @@
 # vozlocal: show a Spanish phrase, pause, then reveal the translation. See README.md.
 
 # Parse this file with aliases off. zsh expands aliases when a function is defined, so a user's
-# `alias mv='mv -i'` would otherwise end up inside these functions. Restored at the end of the file.
+# `alias mv='mv -i'` would otherwise end up inside these functions. Restored at the end of the file,
+# before anything runs, so a Ctrl-C while the plugin loads can't leave the user's aliases off.
 'builtin' 'typeset' '-gi' '_vozlocal_aliases=0'
 [[ -o aliases ]] && _vozlocal_aliases=1
 'builtin' 'setopt' 'no_aliases'
@@ -88,6 +89,8 @@ _vozlocal_sync() {
   mkdir -p $dir $data || return 1
   # One sync at a time. The kernel drops the lock when its holder exits, so a killed sync can't leave it stuck.
   : >> $dir/sync.lock && zsystem flock -t 0 -f lock $dir/sync.lock 2>/dev/null || { print -u2 "voz sync: already running"; return 1 }
+  # Holding the lock, so any temp files left by a sync that was killed can go.
+  rm -f $dir/sync.(in|new).<->(N) $mine.tmp.<->(N)
   local fetched=$dir/sync.in.$$ fresh=$dir/sync.new.$$ tmp=$mine.tmp.$$
   {
     [[ -r $dir/sync_last_id ]] && since=$(<$dir/sync_last_id)
@@ -109,7 +112,7 @@ _vozlocal_sync() {
       FILENAME != ENVIRON["VOZ_IN"] { if (FNR > 1) have[$1]; next }
       /^[0-9]+\|/ && $1 + 0 > max { max = $1 + 0 }
       !/^[0-9]+\|[^|]+\|[^|]+$/ || $0 !~ utf8 { next }
-      /[\001-\037\177]|\302[\200-\237]|\342\200[\213-\217\250-\256]|\342\201[\240-\244\246-\251]|\357\273\277/ { next }
+      /[\001-\037\177]|\302[\200-\237\255]|\330\234|\342\200[\213-\217\250-\256]|\342\201[\240-\244\246-\251]|\357\273\277|\357\277[\271-\273]|\363\240[\200-\201]/ { next }
       !($2 in have) { have[$2]; print $2 "|" $3 > ENVIRON["VOZ_OUT"]; n++ }
       END { print max + 0, n + 0 }' $files $fetched) || return 1
     local -a r=( ${=result} )
@@ -127,7 +130,7 @@ _vozlocal_sync() {
 
 # In interactive terminals: sync with the WhatsApp bot in the background at most once per
 # VOZLOCAL_SYNC_INTERVAL minutes, and show a phrase at most once per VOZLOCAL_INTERVAL (0 = every shell).
-() {
+_vozlocal_startup() {
   emulate -L zsh
   [[ -o interactive && -t 1 ]] || return 0
   local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal synced
@@ -153,3 +156,4 @@ _vozlocal_sync() {
 
 (( _vozlocal_aliases )) && 'builtin' 'setopt' 'aliases'
 'builtin' 'unset' '_vozlocal_aliases'
+_vozlocal_startup
