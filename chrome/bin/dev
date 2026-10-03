@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run a command in the chrome/ Docker image, with the repo mounted at /app. Examples:
+#   chrome/bin/dev bin/build-data
+#   chrome/bin/dev bundle exec rspec
+set -eu
+here=$(cd "$(dirname "$0")/.." && pwd)
+docker build -q -t vozlocal-chrome "$here" >/dev/null
+tty=; [ -t 0 ] && [ -t 1 ] && tty=-t
+exec docker run --rm -i $tty -v "$here/..:/app" -w /app/chrome vozlocal-chrome "$@"

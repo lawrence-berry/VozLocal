@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Bundle terminal/data into the extension as one JSON file: {region: {category: [[phrase, translation], ...]}}.
+# The extension can't list a folder, so it reads this instead. mine.psv is personal (gitignored), so it stays
+# out; the extension gets those phrases from the bot, as `voz sync` does.
+#
+#   bin/build-data          write extension/data/phrases.json
+#   bin/build-data --check  exit 1 if it doesn't match terminal/data
+
+require 'json'
+
+ROOT = File.expand_path('../..', __dir__)
+DATA = File.join(ROOT, 'terminal', 'data')
+OUT = File.join(ROOT, 'chrome', 'extension', 'data', 'phrases.json')
+
+# Same rules as voz: skip the header line, keep lines with a |, split at the first |.
+def rows(path)
+  lines = File.readlines(path, chomp: true, encoding: 'UTF-8')
+  abort "#{path} isn't valid UTF-8" unless lines.all?(&:valid_encoding?)
+  lines.drop(1).select { |line| line.include?('|') }.map { |line| line.split('|', 2) }
+end
+
+def phrases
+  Dir.children(DATA).sort.select { |d| File.directory?(File.join(DATA, d)) }.to_h do |region|
+    files = Dir.glob(File.join(DATA, region, '*.psv')).sort.reject { |f| File.basename(f) == 'mine.psv' }
+    # A category with no phrases is left out, so the new tab never lands on an empty day.
+    [region, files.to_h { |f| [File.basename(f, '.psv'), rows(f)] }.reject { |_, list| list.empty? }]
+  end
+end
+
+# One row per line, so a phrase change shows as a one-line diff.
+def render(data)
+  regions = data.map do |region, categories|
+    cats = categories.map do |name, list|
+      lines = list.map { |row| "      #{JSON.generate(row)}" }.join(",\n")
+      "    #{JSON.generate(name)}: [\n#{lines}\n    ]"
+    end
+    "  #{JSON.generate(region)}: {\n#{cats.join(",\n")}\n  }"
+  end
+  "{\n#{regions.join(",\n")}\n}\n"
+end
+
+json = render(phrases)
+
+if ARGV == ['--check']
+  next_step = 'run chrome/bin/build-data and commit the result'
+  abort "#{OUT} is missing: #{next_step}" unless File.exist?(OUT)
+  abort "#{OUT} doesn't match terminal/data: #{next_step}" unless File.read(OUT, encoding: 'UTF-8') == json
+  puts 'phrases.json matches terminal/data'
+elsif ARGV.empty?
+  File.write(OUT, json)
+  puts "wrote #{OUT.delete_prefix("#{ROOT}/")}"
+else
+  abort 'usage: bin/build-data [--check]'
+end
