@@ -40,7 +40,7 @@ voz() {
   idx=$(_vozlocal_category $#files $(( EPOCHSECONDS / 86400 )))
   src=( $files[idx] )
   [[ -r $data/mine.psv ]] && src+=( $data/mine.psv )
-  [[ -r $dir/learned ]] && src=( $dir/learned $src )
+  [[ -f $dir/learned && -r $dir/learned ]] && src=( $dir/learned $src )
   # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned, and
   # skip the phrase shown last (read from its file, however long) unless it's the only one, so two terminals
   # in a row don't repeat it. Order: unlearned and not last, any unlearned, any not last, any.
@@ -62,7 +62,8 @@ voz() {
       else if (o) print other[int(rand() * o) + 1]; else if (n) print all[int(rand() * n) + 1]
     }' $src)
   [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
-  mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
+  # Only write a regular file: opening a FIFO for writing blocks until something reads it.
+  [[ -f $dir/last_phrase || ! -e $dir/last_phrase ]] && mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
 
   _vozlocal_int VOZLOCAL_DELAY 2
   trap 'printf "\r\e[K"; return 130' INT
@@ -80,9 +81,10 @@ yas() {
   emulate -L zsh
   local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal last
   local -a learned
-  [[ -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
+  # Regular files only: a directory there would print an error and a FIFO would hang $(<…).
+  [[ -f $dir/last_phrase && -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
   [[ -n $last ]] || { print -u2 "yas: no phrase to mark yet, run voz first"; return 1 }
-  [[ -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
+  [[ -f $dir/learned && -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
   [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned
   print -r -- "  ✓ learned: ${last%%|*}"
 }

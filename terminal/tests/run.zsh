@@ -103,7 +103,15 @@ check "a huge last phrase doesn't break voz" "$(run "XDG_CACHE_HOME=${(q)TMP}/no
 
 rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal/last_phrase
 check "a directory where last_phrase should be is ignored" \
-  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; voz 2>&1 | grep -c 'is a directory'")" "0"
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; out=\$(voz 2>&1); rc=\$?; [[ \$out == *'is a directory'* ]] && print ERR; print rc=\$rc")" "rc=0"
+check "yas with a directory where last_phrase should be fails with a message" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; yas; print rc=\$?")" $'yas: no phrase to mark yet, run voz first\nrc=1'
+
+# A FIFO would block a read forever; the watchdog kills the shell after 5s so a regression fails instead of hanging.
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal; mkfifo $TMP/norepeat/vozlocal/{last_phrase,learned}
+check "a FIFO where last_phrase or learned should be doesn't hang voz or yas" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; { sleep 5; kill \$\$ } >/dev/null 2>&1 &!; voz >/dev/null; print voz=\$?; yas; print yas=\$?; kill \$! 2>/dev/null")" \
+  $'voz=0\nyas: no phrase to mark yet, run voz first\nyas=1'
 rm -rf $TMP/norepeat
 
 # --- yas ---
