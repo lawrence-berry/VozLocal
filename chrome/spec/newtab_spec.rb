@@ -30,7 +30,7 @@ RSpec.describe 'The new tab page' do
     open_newtab(mine: [nil, ['a'], { 'phrase' => 'b' }, %w[Zarpado Outrageous]], learned: 5, delay: 'x',
                 region: 42, swapped: 'yes', last: 7)
 
-    expect(shown_row || text('left-text')).not_to be_nil
+    expect([*all_rows, %w[Zarpado Outrageous]].map(&:first)).to include(text('left-text'))
     expect(text('lang-left')).to eq('Español (Rioplatense)')
     page.wait_for_selector('#right-text:not(:empty)', timeout: 5000)
   end
