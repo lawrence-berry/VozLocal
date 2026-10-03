@@ -65,6 +65,9 @@ Know a phrase already? Type `yas` right after it appears and VozLocal won't pick
 ### 📱 Add phrases from WhatsApp
 Heard something new in a café? Message your VozLocal bot on WhatsApp, for example `Bondi = Bus`, and reply `yes` to its preview. The next time a terminal opens, the phrase is synced into your rotation. The bot is optional and you host it yourself; see [bot/README.md](bot/README.md).
 
+### 🌐 In every new tab
+The Chrome extension in [chrome/](chrome/README.md) shows a phrase in each new tab, laid out like Google Translate. Run `voz install-chrome` once and it shares your learned phrases and WhatsApp phrases with the terminal: `yas` a phrase in one and it's gone from the other.
+
 ### 🌍 Add your own regions
 Phrases are stored as plain text files, one folder per region. To add Mexican slang, Castilian idioms or a whole new language, create a folder and a few files. You don't need to change any code.
 
@@ -123,6 +126,8 @@ echo 'source ~/VozLocal/terminal/vozlocal.plugin.zsh' >> ~/.zshrc
 | `voz` | Shows a new phrase from today's category straight away |
 | `yas` | Marks the last phrase shown as learned, so it stops coming up |
 | `voz sync` | Fetches phrases you've confirmed in the WhatsApp bot (also runs in the background when a terminal opens) |
+| `voz install-chrome` | Lets the Chrome extension share learned phrases and WhatsApp phrases with the terminal. Run it again if you move the repo; `--remove` undoes it |
+| `voz install-cron` | Runs `voz sync` every 15 minutes, so new WhatsApp phrases reach Chrome even when no terminal is open. The last run's output is in `~/.cache/vozlocal/cron.log`. macOS may ask you to let your terminal change the crontab the first time; `--remove` undoes it |
 
 ---
 
@@ -191,7 +196,7 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 52 checks in about 14 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 78 checks in about 15 seconds. They cover the phrase-and-reveal flow, the host Chrome talks to, `voz install-chrome` and `voz install-cron`, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
 
 The WhatsApp bot has its own tests, which need only Node 22.5 or newer:
 
@@ -205,8 +210,6 @@ node --test bot/test
 
 VozLocal starts in the terminal, but it's designed to reach you wherever you are.
 
-- **🌐 Chrome new tab page.** A browser extension that shows the day's phrase every time you open a new tab, using the same phrase data and daily rotation as the terminal.
-- **📱 Phrases from your phone, everywhere.** The WhatsApp bot already brings phrases to the terminal. Next, the same phrases in the browser, backed by a shared phrase database.
 - ** Speach mode? **
 
 ---

@@ -160,7 +160,9 @@ main {
 .icon-btn[aria-pressed="true"] { background: var(--pressed); color: var(--pressed-text); }
 #swap { justify-self: center; }
 
-.hint { margin: 16px 4px 0; color: var(--muted); font-size: 12px; }
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; margin: 16px 4px 0; }
+.hint, .link { margin: 0; color: var(--muted); font-size: 12px; }
+.link code { font-family: ui-monospace, Menlo, monospace; }
 kbd {
   padding: 1px 6px;
   border: 1px solid var(--line);

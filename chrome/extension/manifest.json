@@ -4,6 +4,7 @@
   "description": "A Rioplatense Spanish phrase, and then its meaning, in every new tab.",
   "version": "0.1.0",
   "chrome_url_overrides": { "newtab": "newtab.html" },
-  "permissions": ["storage"],
+  "permissions": ["storage", "nativeMessaging"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqeZTJCFJgN9Jyh+7i5GMtqP56RHQ6Aq9nfDUCrxox4AwNvaIPGVepwGQrOJZZM9iWmazG4TxQoZtr5lwu12EWoJeL3U7pegtydlEqVTfuKaPpuma/6IthyXEDcqJWkhoF6agt/5/xGfpoekprZZG3KKHhFE8Xn77gJFB/q6sLU3etubx8L+bbxKkpie33rtnPdSvhBO4hSR/MJMay79/IC3MN+DMRKPTRWVjoJsuZsS8kt6ZLgfnejFghc/dUzrMFCoY8LcUZ879i+ltjMHIAzfrB8wsUM1nTlwD2LuaDTXNkR1k/K460IaU7m7PR4u1ldKVkBoOdfEiMxGkaG5YwQIDAQAB",
   "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
 }
