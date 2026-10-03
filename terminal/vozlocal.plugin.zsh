@@ -161,7 +161,7 @@ _vozlocal_install_cron() {
   else
     crontab -r 2>/dev/null
   fi
-  [[ $1 == --remove ]] && print "voz: stopped syncing every 2 minutes" || print "voz: syncing with the bot every 2 minutes"
+  [[ $1 == --remove ]] && print "voz: stopped syncing from cron" || print "voz: syncing with the bot every 2 minutes"
 }
 
 # voz sync: append phrases confirmed in the WhatsApp bot since the last sync to mine.psv. See bot/README.md.

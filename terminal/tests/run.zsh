@@ -393,8 +393,8 @@ CRON="crontab() {
   esac
 }"
 CRONLOG=$TMP/cache/vozlocal/cron.log
-print '0 9 * * * other job\n\n# a comment' > $TMP/crontab
-check "install-cron adds one sync line and keeps other jobs, however often it runs" \
+print '0 9 * * * other job\n\n# a comment\n*/15 * * * * old line # vozlocal sync' > $TMP/crontab
+check "install-cron replaces an older sync line and keeps other jobs, however often it runs" \
   "$(run "$CRON; voz install-cron; voz install-cron" >/dev/null; cat $TMP/crontab)" \
   "$(lit $'0 9 * * * other job\n\n# a comment\n*/2 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
 
