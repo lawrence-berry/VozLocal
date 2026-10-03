@@ -3,7 +3,7 @@
 emulate -L zsh
 setopt extended_glob
 
-unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN  # user settings must not leak into the tests
+unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN NO_COLOR  # user settings must not leak into the tests
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
@@ -30,6 +30,8 @@ run_tty() {
     script -q /dev/null zsh -fic $cmd </dev/null 2>&1
   fi
 }
+
+lit() { print -rn -- ${(b)1} }  # a check pattern that matches $1 exactly
 
 check() {  # check <name> <output> <pattern>
   if [[ $2 == $~3 ]]; then
@@ -63,12 +65,19 @@ check "works despite hostile user shell options" \
 check "countdown shows one dot per quarter second" \
   "$(run 'VOZLOCAL_DELAY=1 voz')" "*....*...*..*.*→ hello*"
 
+check "voz colours the phrase bold bright cyan and the countdown grey, as in the demo" \
+  "${$(run 'VOZLOCAL_DELAY=1; voz')//$'\e'/<E>}" \
+  "$(lit '<E>[1;38;5;81mhola<E>[0m')*$(lit '<E>[38;5;242m....<E>[0m')*$(lit '→ hello')"
+
+check "NO_COLOR turns the colours off, and still shows the phrase, dots and meaning" \
+  "${$(run 'VOZLOCAL_DELAY=1; NO_COLOR=1; voz')//$'\e'/<E>}" "hola*....*→ hello~*<E>\\[[0-9;]#m*"
+
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"
 
 # Phrase lines (the bold first line of each voz) from n calls in a row, one per element.
 # voz runs directly, not in a pipeline: a subshell per call would give every call the same $RANDOM.
-voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;36m*} }
+voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;38;5;81m*} }
 no_repeats() {  # no_repeats <lines…>: "<count> repeats=<consecutive equal pairs>"
   integer i r=0; for (( i = 2; i <= $#; i++ )); [[ ${(P)i} == ${(P)$((i - 1))} ]] && (( ++r )); print "$# repeats=$r"
 }
@@ -285,7 +294,6 @@ check "corrupt timestamp is ignored, not evaluated" \
 
 H=$TMP/host
 hex() { print -rn -- $1 | od -An -v -tx1 | tr -d ' \n' }
-lit() { print -rn -- ${(b)1} }  # a check pattern that matches $1 exactly
 # Frame a message the way Chrome does: its length in 4 bytes, then the message.
 frame() { local n=${#1}; printf "\\x$(( [##16] n & 255 ))\\x$(( [##16] n >> 8 & 255 ))\\x00\\x00%s" $1 }
 # Send one message to the host. Prints the reply without its 4-byte length.
@@ -393,14 +401,14 @@ CRON="crontab() {
   esac
 }"
 CRONLOG=$TMP/cache/vozlocal/cron.log
-print '0 9 * * * other job\n\n# a comment' > $TMP/crontab
-check "install-cron adds one sync line and keeps other jobs, however often it runs" \
+print '0 9 * * * other job\n\n# a comment\n*/15 * * * * old line # vozlocal sync' > $TMP/crontab
+check "install-cron replaces an older sync line and keeps other jobs, however often it runs" \
   "$(run "$CRON; voz install-cron; voz install-cron" >/dev/null; cat $TMP/crontab)" \
-  "$(lit $'0 9 * * * other job\n\n# a comment\n*/15 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
+  "$(lit $'0 9 * * * other job\n\n# a comment\n*/2 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
 
 rm -f $TMP/crontab
 check "install-cron starts a crontab when there's none" \
-  "$(run "$CRON; voz install-cron" >/dev/null; grep -c "^\*/15 .* # vozlocal sync\$" $TMP/crontab; wc -l < $TMP/crontab | tr -d ' ')" $'1\n1'
+  "$(run "$CRON; voz install-cron" >/dev/null; grep -c "^\*/2 .* # vozlocal sync\$" $TMP/crontab; wc -l < $TMP/crontab | tr -d ' ')" $'1\n1'
 
 print '0 9 * * * other job' > $TMP/crontab
 check "install-cron leaves the table alone if it can't read it" \

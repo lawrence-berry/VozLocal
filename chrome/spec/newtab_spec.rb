@@ -75,6 +75,15 @@ RSpec.describe 'The new tab page' do
     expect(text('right-text')).to eq('')
   end
 
+  it 'shows the tagline under the name' do
+    open_newtab
+
+    expect(text('tagline')).to eq('Learn the Spanish Porteños actually speak, one tab at a time.')
+    name, tagline = %w[.brand #tagline].map { |sel| page.locator(sel).bounding_box }
+    expect(tagline['y']).to be >= name['y'] + name['height']
+    expect(tagline['x']).to eq(name['x'])
+  end
+
   it 'names the category it took the phrase from' do
     open_newtab
     category = ExtensionHelpers::PHRASES['es_AR'].find { |_, rows| rows.include?(shown_row) }.first

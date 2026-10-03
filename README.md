@@ -127,7 +127,7 @@ echo 'source ~/VozLocal/terminal/vozlocal.plugin.zsh' >> ~/.zshrc
 | `yas` | Marks the last phrase shown as learned, so it stops coming up |
 | `voz sync` | Fetches phrases you've confirmed in the WhatsApp bot (also runs in the background when a terminal opens) |
 | `voz install-chrome` | Lets the Chrome extension share learned phrases and WhatsApp phrases with the terminal. Run it again if you move the repo; `--remove` undoes it |
-| `voz install-cron` | Runs `voz sync` every 15 minutes, so new WhatsApp phrases reach Chrome even when no terminal is open. The last run's output is in `~/.cache/vozlocal/cron.log`. macOS may ask you to let your terminal change the crontab the first time; `--remove` undoes it |
+| `voz install-cron` | Runs `voz sync` every 2 minutes, so new WhatsApp phrases reach Chrome even when no terminal is open. The last run's output is in `~/.cache/vozlocal/cron.log`. macOS may ask you to let your terminal change the crontab the first time; `--remove` undoes it |
 
 ---
 
@@ -143,6 +143,7 @@ Everything is optional. Set these in your `~/.zshrc` **before** the `source` lin
 | `VOZLOCAL_BOT_URL` | *(unset)* | Your WhatsApp bot's address. Leave unset to keep VozLocal fully offline |
 | `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`, used by `voz sync`. It's a secret, so keep it in `~/.secrets/vozlocal.zsh` rather than `~/.zshrc` ([bot/SETUP.md section 13](bot/SETUP.md#13-point-the-terminal-at-the-bot)) |
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
+| `NO_COLOR` | *(unset)* | Set it to anything to turn off colour ([no-color.org](https://no-color.org)) |
 
 For example, for a longer pause and a phrase in every new tab:
 ```sh
