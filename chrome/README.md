@@ -13,7 +13,7 @@ After pulling changes, click the reload arrow on the extension's card.
 
 ## Sharing with the terminal
 
-With the terminal plugin installed, run this once:
+With the [terminal plugin](../terminal/README.md) installed, run this once:
 
 ```sh
 voz install-chrome
@@ -75,6 +75,7 @@ A spec fails if you forget. Your own phrases (`mine.psv`) aren't copied: the ext
 ## Tests
 
 ```sh
-cd chrome && node --test test        # logic
-chrome/bin/dev bundle exec rspec     # Ruby and browser specs, in Docker (the first build takes a few minutes)
+cd chrome
+node --test test             # logic
+bin/dev bundle exec rspec    # Ruby and browser specs, in Docker (the first build takes a few minutes)
 ```

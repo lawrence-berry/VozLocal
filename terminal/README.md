@@ -8,7 +8,7 @@ A zsh plugin that shows a Rioplatense Spanish phrase when you open a terminal, c
 
 ## Install
 
-It needs **zsh 5.0 or newer**, plus `awk`, `sleep` and `mkdir`.
+It needs **zsh 5.0 or newer**, plus `awk`, `sleep` and `mkdir`, and `curl` if you use the bot.
 - **macOS:** all of these come with the system. zsh has been the default shell since Catalina (10.15).
 - **Linux:** the tools come with every standard distribution, but you may need to install zsh: `sudo apt install zsh`, `sudo dnf install zsh` or `sudo pacman -S zsh`. Then make it your shell with `chsh -s "$(command -v zsh)"`.
 
@@ -48,6 +48,14 @@ All of these are optional. Set them in `~/.zshrc` **before** the `source` line:
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
 | `NO_COLOR` | *(unset)* | Set it to anything to turn off colour ([no-color.org](https://no-color.org)) |
 
+For example, for a longer pause and a phrase in every new shell:
+
+```sh
+export VOZLOCAL_DELAY=4
+export VOZLOCAL_INTERVAL=0
+source ~/VozLocal/terminal/vozlocal.plugin.zsh
+```
+
 ## Phrases and regions
 
 Each category is a pipe-separated (`.psv`) file with a header row, in `data/<region>/`:
@@ -62,7 +70,7 @@ Fiaca|Laziness (tengo fiaca = I don't feel like doing anything)
 - **A new category:** add a file. It joins the daily rotation by itself.
 - **A new region:** add a folder and set `VOZLOCAL_REGION`.
 - **Your WhatsApp phrases** go to `mine.psv`. It isn't a category: its phrases join whichever category is on today. It's gitignored, so your phrases stay on your machine.
-- **After editing a shipped file,** run `chrome/bin/dev bin/build-data` so the Chrome extension's copy matches. A test fails if you forget.
+- **After editing a shipped file,** run `chrome/bin/dev bin/build-data` so the Chrome extension's copy matches. A Chrome spec fails if you forget.
 
 The pipe separator was chosen because phrases often contain commas (*"Dale, nos vemos en un rato."*).
 
@@ -70,7 +78,7 @@ The pipe separator was chosen because phrases often contain commas (*"Dale, nos 
 
 It's sourced into your interactive shell, so it's written to stay out of the way:
 
-- **Your shell options don't affect it.** Every function starts with `emulate -L zsh`, so options like `KSH_ARRAYS` or `NO_UNSET` don't change its behaviour, and its own settings don't leak out. It's parsed with aliases off, so an `alias mv='mv -i'` can't change its commands.
+- **Your shell options don't affect it.** Its commands run under `emulate -L zsh`, so options like `KSH_ARRAYS` or `NO_UNSET` don't change its behaviour, and its own settings don't leak out. It's parsed with aliases off, so an `alias mv='mv -i'` can't change its commands.
 - **It checks its inputs.** zsh runs code inside `$(( ))`, so every setting and saved timestamp is checked as a whole number first.
 - **It stays quiet in scripts.** Phrases appear automatically only in interactive terminals.
 - **It handles Ctrl-C.** Ctrl-C during the countdown clears the line and returns `130`.
