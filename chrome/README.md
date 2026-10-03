@@ -53,7 +53,7 @@ It never shows the same phrase twice in a row. Learned phrases come back only wh
 | Path | What |
 |---|---|
 | `extension/` | The extension Chrome loads |
-| `extension/lib/voz.js` | Picking the day's category and phrase, and reading the bot's `/phrases` rows. No DOM, so it's tested in Node |
+| `extension/lib/voz.js` | Picking the day's category and phrase, cleaning stored settings, and reading the terminal host's replies. No DOM, so it's tested in Node |
 | `extension/newtab.*` | The page. Styles copy Google Translate's, with Google Sans bundled in `extension/fonts` (SIL Open Font License) |
 | `extension/data/phrases.json` | `terminal/data` bundled as JSON, made by `bin/build-data`. Don't edit it by hand |
 | `bin/build-data` | Rebuilds `phrases.json`. `--check` fails if it's out of date |
