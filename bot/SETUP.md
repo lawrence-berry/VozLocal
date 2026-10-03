@@ -365,9 +365,9 @@ The token is a secret, so keep it out of `~/.zshrc` (which you may want to back 
 
 ```zsh
 mkdir -p ~/.secrets && chmod 700 ~/.secrets
-read -rs 'tok?SYNC_TOKEN: ' && print
-(umask 077; print -r -- "export VOZLOCAL_BOT_TOKEN=$tok" > ~/.secrets/vozlocal.zsh); unset tok
-chmod 600 ~/.secrets/vozlocal.zsh
+read -rs 'tok?SYNC_TOKEN: ' && print &&
+  (umask 077; print -r -- "export VOZLOCAL_BOT_TOKEN=$tok" >| ~/.secrets/vozlocal.zsh && chmod 600 ~/.secrets/vozlocal.zsh)
+unset tok
 ```
 
 Then in `~/.zshrc`, **above** the line that sources the plugin (the plugin reads these as it loads), load the secrets and set the URL:
