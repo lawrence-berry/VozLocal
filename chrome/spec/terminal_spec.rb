@@ -74,13 +74,13 @@ RSpec.describe 'Sharing with the terminal' do
   it 'shows a phrase at once when the terminal is slow, and takes its answer when it comes', :terminal do
     open_newtab(delay: 30)
     write_terminal(learned: ['Che|Hey'])
-    slow_host(1.2) # under the extension's 1.5 s limit, well over its 0.4 s wait
+    slow_host(0.9) # well under the extension's 1.5 s limit, over its 0.4 s wait
 
     started = Time.now
     page.reload
     page.wait_for_selector('#left-text:not(:empty)')
 
-    expect(Time.now - started).to be < 1
+    expect(Time.now - started).to be < 0.8
     expect(text('link')).to eq('')
     expect { text('link') == 'Shared with the terminal' }.to eventually_be_true
     expect(storage['learned']).to eq(['Che|Hey'])
