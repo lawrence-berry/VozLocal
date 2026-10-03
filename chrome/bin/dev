@@ -5,4 +5,5 @@
 set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
 docker build -q -t vozlocal-chrome "$here" >/dev/null
-exec docker run --rm -v "$here/..:/app" -w /app/chrome vozlocal-chrome "$@"
+tty=; [ -t 0 ] && [ -t 1 ] && tty=-t
+exec docker run --rm -i $tty -v "$here/..:/app" -w /app/chrome vozlocal-chrome "$@"

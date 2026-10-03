@@ -16,14 +16,16 @@ OUT = File.join(ROOT, 'chrome', 'extension', 'data', 'phrases.json')
 
 # Same rules as voz: skip the header line, keep lines with a |, split at the first |.
 def rows(path)
-  File.readlines(path, chomp: true, encoding: 'UTF-8').drop(1).select { |line| line.include?('|') }
-      .map { |line| line.split('|', 2) }
+  lines = File.readlines(path, chomp: true, encoding: 'UTF-8')
+  abort "#{path} isn't valid UTF-8" unless lines.all?(&:valid_encoding?)
+  lines.drop(1).select { |line| line.include?('|') }.map { |line| line.split('|', 2) }
 end
 
 def phrases
   Dir.children(DATA).sort.select { |d| File.directory?(File.join(DATA, d)) }.to_h do |region|
     files = Dir.glob(File.join(DATA, region, '*.psv')).sort.reject { |f| File.basename(f) == 'mine.psv' }
-    [region, files.to_h { |f| [File.basename(f, '.psv'), rows(f)] }]
+    # A category with no phrases is left out, so the new tab never lands on an empty day.
+    [region, files.to_h { |f| [File.basename(f, '.psv'), rows(f)] }.reject { |_, list| list.empty? }]
   end
 end
 

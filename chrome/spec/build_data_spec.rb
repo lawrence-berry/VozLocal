@@ -46,6 +46,24 @@ RSpec.describe 'bin/build-data' do
     expect(output['es_AR'].keys).to eq(['greeting'])
   end
 
+  it 'leaves out a category with no phrases' do
+    psv('greeting.psv', "phrase|translation\nChe|Hey\n")
+    psv('empty.psv', "phrase|translation\n")
+
+    run_in(@root)
+
+    expect(output['es_AR'].keys).to eq(['greeting'])
+  end
+
+  it 'stops with the file name when a .psv is not valid UTF-8' do
+    psv('greeting.psv', "phrase|translation\nCaf\xE9|Coffee\n".b)
+
+    out, status = run_in(@root)
+
+    expect(status).not_to be_success
+    expect(out).to include("greeting.psv isn't valid UTF-8")
+  end
+
   it '--check passes when the file is current and fails after a .psv changes' do
     psv('greeting.psv', "phrase|translation\nChe|Hey\n")
     run_in(@root)

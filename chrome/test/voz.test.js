@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, dayNumber, key, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, dayNumber, key, knownPhrases, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -28,29 +28,31 @@ test('categoryIndex is the same on every run and shuffles between cycles', () =>
 });
 
 const rows = [['uno', 'one'], ['dos', 'two'], ['tres', 'three']];
-const always = i => () => i / rows.length;  // rand() that lands on index i of a 3-item pool
+// Every phrase pick can return, found by sweeping rand() across [0, 1).
+const pool = (...args) => new Set(Array.from({ length: 12 }, (_, i) => pick(...args, () => i / 12)?.[0]));
 
 test('pick skips learned phrases and the last one shown', () => {
-  const learned = new Set([key(rows[0])]);
-  for (let i = 0; i < 50; i++) {
-    assert.deepEqual(pick(rows, learned, key(rows[1])), rows[2]);
-  }
+  assert.deepEqual(pool(rows, new Set([key(rows[0])]), key(rows[1])), new Set(['tres']));
+  assert.deepEqual(pool(rows, new Set(), key(rows[1])), new Set(['uno', 'tres']));
 });
 
 test('pick falls back: any unlearned, then any not last, then any', () => {
   // Only "dos" is unlearned, and it was shown last: an unlearned repeat beats a learned phrase.
   assert.deepEqual(pick(rows, new Set([key(rows[0]), key(rows[2])]), key(rows[1])), rows[1]);
   // All learned: anything but the last.
-  const all = new Set(rows.map(key));
-  for (let i = 0; i < 50; i++) assert.notDeepEqual(pick(rows, all, key(rows[0])), rows[0]);
+  assert.deepEqual(pool(rows, new Set(rows.map(key)), key(rows[0])), new Set(['dos', 'tres']));
   // A category's only phrase shows every time.
   assert.deepEqual(pick([rows[0]], new Set(), key(rows[0])), rows[0]);
   assert.equal(pick([], new Set(), null), null);
 });
 
-test('pick uses the random source it is given', () => {
-  assert.deepEqual(pick(rows, new Set(), null, always(0)), rows[0]);
-  assert.deepEqual(pick(rows, new Set(), null, always(2)), rows[2]);
+test('pick can return any phrase when nothing is learned or shown', () => {
+  assert.deepEqual(pool(rows, new Set(), null), new Set(['uno', 'dos', 'tres']));
+});
+
+test('knownPhrases covers every category in the region and the synced phrases', () => {
+  const region = { a: [['a1', 'A']], b: [['b1', 'B'], ['b2', 'B']] };
+  assert.deepEqual(knownPhrases(region, [['m1', 'M']]), new Set(['a1', 'b1', 'b2', 'm1']));
 });
 
 test("todaysRows is the day's category plus the bot's phrases", () => {
@@ -86,6 +88,11 @@ test('readSyncRows drops malformed and unsafe rows but still counts their ids', 
   ];
   const out = readSyncRows(bytes(lines.join('\n')), new Set());
   assert.deepEqual(out, { rows: [['Ok', 'Fine']], maxId: 19 });
+});
+
+test('readSyncRows drops a row that starts with a BOM and still counts long ids', () => {
+  assert.deepEqual(readSyncRows(bytes('\ufeff5|a|b\n123456789012345678901|c|d\n'), new Set()),
+    { rows: [['c', 'd']], maxId: 123456789012345678901 });
 });
 
 test('readSyncRows drops a row of invalid UTF-8 and keeps the rest', () => {
