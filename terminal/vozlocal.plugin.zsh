@@ -138,7 +138,7 @@ _vozlocal_install_chrome() {
   print "voz: Chrome now shares learned phrases with the terminal (reload the extension if it's open)"
 }
 
-# voz install-cron: run voz sync every 15 minutes, so phrases from the WhatsApp bot reach mine.psv (and Chrome)
+# voz install-cron: run voz sync every 2 minutes, so phrases from the WhatsApp bot reach mine.psv (and Chrome)
 # even when no terminal is open. It runs an interactive zsh, so it sees the same settings and secrets you do.
 # The last run's output is kept in cron.log in the cache folder. --remove undoes it.
 _vozlocal_install_cron() {
@@ -155,13 +155,13 @@ _vozlocal_install_cron() {
   local -a lines=( "${(@f)current}" )
   lines=( "${(@)lines:#*$tag}" )
   (( $#lines )) && [[ -z $lines[-1] ]] && lines[-1]=()  # nothing read gives one empty line
-  [[ $1 == --remove ]] || lines+=( "*/15 * * * * /bin/zsh -ic 'voz sync' >| ${(q)log} 2>&1 $tag" )
+  [[ $1 == --remove ]] || lines+=( "*/2 * * * * /bin/zsh -ic 'voz sync' >| ${(q)log} 2>&1 $tag" )
   if (( $#lines )); then
     print -rl -- "${(@)lines}" | crontab - || return 1
   else
     crontab -r 2>/dev/null
   fi
-  [[ $1 == --remove ]] && print "voz: stopped syncing every 15 minutes" || print "voz: syncing with the bot every 15 minutes"
+  [[ $1 == --remove ]] && print "voz: stopped syncing every 2 minutes" || print "voz: syncing with the bot every 2 minutes"
 }
 
 # voz sync: append phrases confirmed in the WhatsApp bot since the last sync to mine.psv. See bot/README.md.

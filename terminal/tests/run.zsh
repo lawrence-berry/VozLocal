@@ -396,11 +396,11 @@ CRONLOG=$TMP/cache/vozlocal/cron.log
 print '0 9 * * * other job\n\n# a comment' > $TMP/crontab
 check "install-cron adds one sync line and keeps other jobs, however often it runs" \
   "$(run "$CRON; voz install-cron; voz install-cron" >/dev/null; cat $TMP/crontab)" \
-  "$(lit $'0 9 * * * other job\n\n# a comment\n*/15 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
+  "$(lit $'0 9 * * * other job\n\n# a comment\n*/2 * * * * /bin/zsh -ic \'voz sync\' >| '"$CRONLOG"$' 2>&1 # vozlocal sync')"
 
 rm -f $TMP/crontab
 check "install-cron starts a crontab when there's none" \
-  "$(run "$CRON; voz install-cron" >/dev/null; grep -c "^\*/15 .* # vozlocal sync\$" $TMP/crontab; wc -l < $TMP/crontab | tr -d ' ')" $'1\n1'
+  "$(run "$CRON; voz install-cron" >/dev/null; grep -c "^\*/2 .* # vozlocal sync\$" $TMP/crontab; wc -l < $TMP/crontab | tr -d ' ')" $'1\n1'
 
 print '0 9 * * * other job' > $TMP/crontab
 check "install-cron leaves the table alone if it can't read it" \

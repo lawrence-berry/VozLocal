@@ -21,7 +21,7 @@ voz install-chrome
 
 From then on, both read the same files:
 - **Learned phrases:** `~/.cache/vozlocal/learned`. A phrase you `yas` in the terminal doesn't show in the next tab, and ✓ in Chrome adds to the same file.
-- **Your phrases:** `terminal/data/<region>/mine.psv`, which `voz sync` fills from the WhatsApp bot. Run `voz install-cron` to sync every 15 minutes even when no terminal is open.
+- **Your phrases:** `terminal/data/<region>/mine.psv`, which `voz sync` fills from the WhatsApp bot. Run `voz install-cron` to sync every 2 minutes even when no terminal is open.
 
 **How it works.** Chrome can't read files on disk, so `voz install-chrome` registers `terminal/vozlocal-host` as a [native messaging host](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging). It writes two files into Chrome's `NativeMessagingHosts` folder:
 - a manifest that only lets this extension call the host. The `key` in `manifest.json` fixes the extension's id, so moving this folder doesn't matter;
