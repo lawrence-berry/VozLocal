@@ -1,7 +1,16 @@
-# Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
-ALLOWED_NUMBERS=447700900123        # your WhatsApp number, digits only; comma-separate several
-APP_SECRET=                         # Meta app > App settings > Basic > App secret
-VERIFY_TOKEN=                       # any random string; paste the same into Meta's webhook setup
-WHATSAPP_TOKEN=                     # a permanent system-user access token
-PHONE_NUMBER_ID=                    # WhatsApp > API setup > Phone number ID
-SYNC_TOKEN=                         # any random string; the same goes in VOZLOCAL_BOT_TOKEN
+# Copy to .dev.vars, fill in, and upload with: npx wrangler secret bulk .dev.vars
+# Never commit .dev.vars. Keep comments on their own lines: the file is read by
+# both zsh (set -a; . ./.dev.vars) and Wrangler. Full walkthrough: SETUP.md.
+
+# Your WhatsApp number, digits only with country code. Comma-separate several.
+ALLOWED_NUMBERS=447700900123
+# App dashboard > App settings > Basic > App secret.
+APP_SECRET=
+# Any random string (openssl rand -hex 16). Paste the same into Meta's webhook setup.
+VERIFY_TOKEN=
+# A permanent system-user token (business.facebook.com > System users > Generate new token).
+WHATSAPP_TOKEN=
+# App dashboard > Use cases > Customize > Quickstart: the Phone number ID under the From number.
+PHONE_NUMBER_ID=
+# Any random string (openssl rand -hex 24). The same goes in VOZLOCAL_BOT_TOKEN.
+SYNC_TOKEN=

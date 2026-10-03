@@ -41,52 +41,18 @@ One phrase per message: `phrase = meaning` or `phrase | meaning`. Anything else 
 
 ## Setup
 
-You need a Cloudflare account, a Meta developer account, and a phone number for the bot that isn't on your personal WhatsApp. To try it first, Meta's free test number works for up to five recipients you verify.
+**Follow [SETUP.md](SETUP.md).** It walks through every Cloudflare and Meta page with what each is for, the traps that make Meta's setup look finished when it isn't, a troubleshooting table, and commands that check each step.
 
-### 1. Deploy the Worker
+The short version, for when you've done it before:
 
-```sh
-cd bot
-npm install
-npx wrangler login
-npx wrangler d1 create vozlocal                     # paste the printed database_id into wrangler.toml
-npx wrangler d1 migrations apply vozlocal --remote
-npx wrangler deploy                                 # prints https://vozlocal-bot.<you>.workers.dev
-```
-
-### 2. Create the WhatsApp app
-
-1. At [developers.facebook.com](https://developers.facebook.com/apps), create a **Business** app and add the **WhatsApp** product.
-2. Under **WhatsApp → API setup**, note the **Phone number ID** (the test number's, or your own once you add it).
-3. Under **App settings → Basic**, note the **App secret**.
-4. In **Business settings → System users**, create a system user and generate a permanent token with `whatsapp_business_messaging` and `whatsapp_business_management`.
-5. Under **WhatsApp → Configuration**, set the callback URL to `https://vozlocal-bot.<you>.workers.dev/webhook`. Set the verify token to a random string, then subscribe to the **messages** field. Do step 3 first: Meta checks the verify token the moment you save.
-
-### 3. Set the secrets
-
-Each command prompts for its value:
-
-```sh
-npx wrangler secret put ALLOWED_NUMBERS   # your number, digits only, e.g. 447700900123
-npx wrangler secret put APP_SECRET
-npx wrangler secret put VERIFY_TOKEN      # the same random string as in Meta's webhook setup
-npx wrangler secret put WHATSAPP_TOKEN
-npx wrangler secret put PHONE_NUMBER_ID
-npx wrangler secret put SYNC_TOKEN        # another random string, e.g. from: openssl rand -hex 24
-```
-
-For `wrangler dev`, put the same values in `bot/.dev.vars` instead (see `.dev.vars.example`; it's gitignored).
-
-### 4. Point the terminal at it
-
-In `~/.zshrc`, before the `source` line:
-
-```sh
-export VOZLOCAL_BOT_URL=https://vozlocal-bot.<you>.workers.dev
-export VOZLOCAL_BOT_TOKEN=<your SYNC_TOKEN>
-```
-
-New terminals then sync in the background at most once an hour (`VOZLOCAL_SYNC_INTERVAL`). Run `voz sync` to sync straight away.
+1. **Cloudflare:** in `bot/`, `cp .dev.vars.example .dev.vars` and fill in your number, `VERIFY_TOKEN` and `SYNC_TOKEN`. Then run `npm install`, `npx wrangler login` and `npx wrangler d1 create vozlocal` (paste the id into `wrangler.toml`), then `npx wrangler d1 migrations apply vozlocal --remote` and `npx wrangler deploy`. Upload `VERIFY_TOKEN` (`npx wrangler secret put VERIFY_TOKEN`) before step 5: Meta checks it.
+2. **Meta app:** create one with the **Connect with customers through WhatsApp** use case. Note the **Phone number ID** (not the number), the **WhatsApp Business Account ID** and the **App secret**.
+3. **System user** (business.facebook.com): assign it the app *and* the WhatsApp account, both with full control. Then generate a never-expiring token with `whatsapp_business_messaging` and `whatsapp_business_management`.
+4. **Register** the number if sending fails with `133010` (`POST /<phone number id>/register` with a PIN), and add your own number to the test number's recipient list.
+5. **Webhook:** callback `https://vozlocal-bot.<you>.workers.dev/webhook` with your verify token. Subscribe the **messages** field, and link the app to the WhatsApp account (`POST /<waba id>/subscribed_apps`).
+6. **Keys:** finish `bot/.dev.vars` and upload it: `npx wrangler secret bulk .dev.vars`.
+7. **First message:** have the test number send you the `hello_world` template, then reply `phrase = meaning` in that chat.
+8. **Terminal:** put `VOZLOCAL_BOT_TOKEN` in `~/.secrets/vozlocal.zsh`, then load it and set `VOZLOCAL_BOT_URL` in `~/.zshrc` above the plugin's `source` line ([SETUP.md section 13](SETUP.md#13-point-the-terminal-at-the-bot)).
 
 ## Endpoints
 

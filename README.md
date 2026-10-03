@@ -136,7 +136,7 @@ Everything is optional. Set these in your `~/.zshrc` **before** the `source` lin
 | `VOZLOCAL_DELAY` | `2` | Seconds to wait before showing the translation. Use `0` to show it straight away |
 | `VOZLOCAL_INTERVAL` | `30` | Minimum minutes between automatic phrases. Use `0` to show one in every new shell |
 | `VOZLOCAL_BOT_URL` | *(unset)* | Your WhatsApp bot's address. Leave unset to keep VozLocal fully offline |
-| `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`, used by `voz sync` |
+| `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`, used by `voz sync`. It's a secret, so keep it in `~/.secrets/vozlocal.zsh` rather than `~/.zshrc` ([bot/SETUP.md section 13](bot/SETUP.md#13-point-the-terminal-at-the-bot)) |
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
 
 For example, for a longer pause and a phrase in every new tab:
@@ -191,7 +191,7 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 45 checks in about 12 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 52 checks in about 14 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
 
 The WhatsApp bot has its own tests, which need only Node 22.5 or newer:
 

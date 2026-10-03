@@ -66,6 +66,77 @@ check "countdown shows one dot per quarter second" \
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"
 
+# Phrase lines (the bold first line of each voz) from n calls in a row, one per element.
+# voz runs directly, not in a pipeline: a subshell per call would give every call the same $RANDOM.
+voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;36m*} }
+no_repeats() {  # no_repeats <lines…>: "<count> repeats=<consecutive equal pairs>"
+  integer i r=0; for (( i = 2; i <= $#; i++ )); [[ ${(P)i} == ${(P)$((i - 1))} ]] && (( ++r )); print "$# repeats=$r"
+}
+
+rm -rf $TMP/norepeat
+check "voz never shows the same phrase twice in a row when there's another" \
+  "$(no_repeats ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"})" "30 repeats=0"
+
+mkdir -p $TMP/data/three && print "phrase|translation\nuno|one\ndos|two\ntres|three" > $TMP/data/three/three.psv
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "uno|one" > $TMP/norepeat/vozlocal/learned
+lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=three 30)"} )
+check "voz avoids both learned phrases and the last one" \
+  "$(no_repeats $lines) uno=${#${(M)lines:#*uno*}}" "30 repeats=0 uno=0"
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "uno|one\ndos|two" > $TMP/norepeat/vozlocal/learned
+check "voz avoids the last phrase even when every phrase is learned" \
+  "$(no_repeats ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"})" "30 repeats=0"
+
+print "phrase|translation\nsiete|seven" > $TMP/data/two/mine.psv; rm -rf $TMP/norepeat
+lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"} )
+check "a mine.psv phrase counts as the last one too" \
+  "$(no_repeats $lines) siete=$(( ${#${(M)lines:#*siete*}} > 0 ))" "30 repeats=0 siete=1"
+rm -f $TMP/data/two/mine.psv; rm -rf $TMP/data/three
+
+rm -rf $TMP/norepeat
+check "voz still shows a category's only phrase every time" \
+  "$(voz_lines VOZLOCAL_REGION=test 3)" $'*hola*\n*hola*\n*hola*~*\n*\n*\n*'
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal
+print -rn -- "${(l:3000000::x:)}|y" > $TMP/norepeat/vozlocal/last_phrase
+check "a huge last phrase doesn't break voz" "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; voz; print rc=\$?")" "*→ hello*rc=0"
+
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal/last_phrase
+check "a directory where last_phrase should be is ignored" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; out=\$(voz 2>&1); rc=\$?; [[ \$out == *'is a directory'* ]] && print ERR; print rc=\$rc")" "rc=0"
+check "yas with a directory where last_phrase should be fails with a message" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; yas; print rc=\$?")" $'yas: no phrase to mark yet, run voz first\nrc=1'
+
+# Opening a FIFO blocks until its other end is opened. After 5s the watchdog marks the run as hung and keeps
+# opening every FIFO read-write until it's stopped. That frees whatever is blocked on either end, even an orphaned
+# child, so a regression fails instead of hanging the suite.
+fifo_run() {  # fifo_run <cache dir> <command>
+  local d=$1/vozlocal out
+  { sleep 5; : > $1/hung; while :; do for f in $d/*(Np); do : <>$f; done; sleep 0.2; done } >/dev/null 2>&1 &!
+  local watchdog=$!
+  out=$(run "XDG_CACHE_HOME=${(q)1}; $2")
+  kill $watchdog 2>/dev/null
+  [[ -e $1/hung ]] && out+=$'\nHUNG'
+  print -r -- $out
+}
+
+F=$TMP/fifo
+rm -rf $F; mkdir -p $F/vozlocal; mkfifo $F/vozlocal/{last_phrase,learned}
+check "a FIFO where last_phrase and learned should be doesn't hang voz or yas" \
+  "$(fifo_run $F 'voz >/dev/null; print voz=$?; yas; print yas=$?')" \
+  $'voz=0\nyas: no phrase to mark yet, run voz first\nyas=1'
+
+rm -rf $F; mkdir -p $F/vozlocal; mkfifo $F/vozlocal/learned
+check "yas with a FIFO where learned should be fails instead of hanging" \
+  "$(fifo_run $F 'voz >/dev/null; print voz=$?; yas; print yas=$?')" \
+  $'voz=0\nyas: */learned isn\'t a regular file\nyas=1'
+
+rm -rf $F; mkdir -p $F/vozlocal/learned
+check "yas with a directory where learned should be fails with a message" \
+  "$(run "XDG_CACHE_HOME=${(q)F}; voz >/dev/null; yas; print rc=\$?")" \
+  $'yas: */learned isn\'t a regular file\nrc=1'
+rm -rf $F
+
 # --- yas ---
 
 C="XDG_CACHE_HOME=${(q)TMP}/yas"
