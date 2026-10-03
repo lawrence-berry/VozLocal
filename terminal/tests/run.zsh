@@ -66,6 +66,14 @@ check "countdown shows one dot per quarter second" \
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"
 
+shown=( ${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat VOZLOCAL_REGION=two; repeat 30 { voz | head -1 }")"} )
+repeats=0; for (( i = 2; i <= $#shown; i++ )); [[ $shown[i] == $shown[i-1] ]] && (( ++repeats ))
+check "voz never shows the same phrase twice in a row when there's another" "$#shown repeats=$repeats" "30 repeats=0"
+
+check "voz still shows a category's only phrase every time" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; repeat 3 voz")" "(*hola*→ hello[[:space:]]#)(#c3)"
+rm -rf $TMP/norepeat
+
 # --- yas ---
 
 C="XDG_CACHE_HOME=${(q)TMP}/yas"

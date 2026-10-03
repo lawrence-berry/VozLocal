@@ -41,14 +41,22 @@ voz() {
   src=( $files[idx] )
   [[ -r $data/mine.psv ]] && src+=( $data/mine.psv )
   [[ -r $dir/learned ]] && src=( $dir/learned $src )
-  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned.
+  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned, and
+  # skip the phrase shown last unless it's the only one left, so two terminals in a row don't repeat it.
   # Read $RANDOM here, not inside $( ): subshells all see the same value, so repeated voz calls would repeat.
-  local seed=$RANDOM
-  # Paths go through ENVIRON: awk -v would treat a backslash in them as an escape.
-  line=$(VOZ_LEARNED=$dir/learned awk -v seed=$seed '
+  local seed=$RANDOM last
+  [[ -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
+  # Paths and the last phrase go through ENVIRON: awk -v would treat a backslash in them as an escape.
+  line=$(VOZ_LEARNED=$dir/learned VOZ_LAST=$last awk -v seed=$seed '
     FILENAME == ENVIRON["VOZ_LEARNED"] { done[$0]; next }
-    FNR > 1 && /\|/ { all[++n] = $0; if (!($0 in done)) todo[++m] = $0 }
-    END { srand(seed); if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1] }' $src)
+    FNR > 1 && /\|/ {
+      all[++n] = $0
+      if (!($0 in done)) { todo[++m] = $0; if ($0 != ENVIRON["VOZ_LAST"]) fresh[++k] = $0 }
+    }
+    END {
+      srand(seed)
+      if (k) print fresh[int(rand() * k) + 1]; else if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1]
+    }' $src)
   [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
   mkdir -p $dir && print -r -- $line >| $dir/last_phrase
 
