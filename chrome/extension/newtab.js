@@ -41,8 +41,14 @@ const learnMessage = ({ key: k, on }) => ({ op: 'learn', key: toHex(k), on });
 // storage for when it can't be reached. Resolves to { ok } or { ok: false, error }.
 async function syncWithTerminal() {
   try {
-    const sent = [...settings.pending];
-    for (const mark of sent) await askHost(learnMessage(mark));
+    const sent = [];
+    for (const mark of settings.pending) {
+      // Another tab may have sent or replaced it meanwhile; a stale mark mustn't undo a newer change.
+      const queued = cleanSettings(await chrome.storage.local.get('pending')).pending;
+      if (!queued.some(p => p.key === mark.key && p.on === mark.on && p.at === mark.at)) continue;
+      await askHost(learnMessage(mark));
+      sent.push(mark);
+    }
     let state = await askHost({ op: 'state' });
     if (!settings.linked) {
       const known = new Set(state.learned);
@@ -92,6 +98,8 @@ async function start() {
     const syncing = syncWithTerminal();
     const first = await Promise.race([syncing, new Promise(done => setTimeout(done, FIRST_WAIT_MS))]);
     build();
+    // A ✓ pressed before the sync is done waits for it, so the sync can't write older marks over it.
+    saving = syncing.then(() => {}, () => {});
     wire();
     show(pick(rows, learned, settings.last));
     if (first) {
@@ -101,7 +109,7 @@ async function start() {
         build();
         updateLearned();
         showLink(result);
-      });
+      }).catch(error => console.warn('VozLocal could not apply the terminal\'s answer:', error));
     }
   } catch (error) {
     console.warn('VozLocal could not start:', error);

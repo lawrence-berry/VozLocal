@@ -363,7 +363,6 @@ check "...and a line whose bytes merely contain 7c isn't" "$(host $STATE)" "*\"m
 host_reset; repeat 6000 print -r -- "$(printf 'x%.0s' {1..90})|y" >> $H/cache/vozlocal/learned
 check "the host refuses to send more than Chrome takes" "$(host $STATE)" "$(lit '{"ok":false,"error":"too much to send"}')"
 
-host_reset
 host_reset; print -r -- 'Bondi|Bus' >> $H/cache/vozlocal/learned
 check "yas and the host share one learned file" \
   "$(run "XDG_CACHE_HOME=${(q)H}/cache; print -r -- 'Guita|Money' > \$XDG_CACHE_HOME/vozlocal/last_phrase; yas >/dev/null"; host $STATE)" \
