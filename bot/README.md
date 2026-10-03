@@ -52,7 +52,7 @@ The short version, for when you've done it before:
 5. **Webhook:** callback `https://vozlocal-bot.<you>.workers.dev/webhook` with your verify token. Subscribe the **messages** field, and link the app to the WhatsApp account (`POST /<waba id>/subscribed_apps`).
 6. **Keys:** finish `bot/.dev.vars` and upload it: `npx wrangler secret bulk .dev.vars`.
 7. **First message:** have the test number send you the `hello_world` template, then reply `phrase = meaning` in that chat.
-8. **Terminal:** set `VOZLOCAL_BOT_URL` and `VOZLOCAL_BOT_TOKEN` in `~/.zshrc` above the plugin's `source` line.
+8. **Terminal:** put `VOZLOCAL_BOT_TOKEN` in `~/.secrets/vozlocal.zsh`, then load it and set `VOZLOCAL_BOT_URL` in `~/.zshrc` above the plugin's `source` line ([SETUP.md section 13](SETUP.md#13-point-the-terminal-at-the-bot)).
 
 ## Endpoints
 

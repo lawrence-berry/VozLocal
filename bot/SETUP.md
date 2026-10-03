@@ -361,12 +361,22 @@ Your reply opens a 24-hour window in which the bot's replies are free ([Meta pri
 
 ## 13. Point the terminal at the bot
 
-In `~/.zshrc`, **above** the line that sources the plugin (the plugin reads these as it loads):
+The token is a secret, so keep it out of `~/.zshrc` (which you may want to back up or publish). Put it in a file of its own that only you can read:
 
 ```sh
-export VOZLOCAL_BOT_URL=https://vozlocal-bot.<you>.workers.dev
-export VOZLOCAL_BOT_TOKEN=<your SYNC_TOKEN>
+mkdir -p ~/.secrets && chmod 700 ~/.secrets
+print -r -- 'export VOZLOCAL_BOT_TOKEN=<your SYNC_TOKEN>' > ~/.secrets/vozlocal.zsh
+chmod 600 ~/.secrets/vozlocal.zsh
 ```
+
+Then in `~/.zshrc`, **above** the line that sources the plugin (the plugin reads these as it loads), load the secrets and set the URL:
+
+```sh
+for _secret in ~/.secrets/*.zsh(N); do source $_secret; done; unset _secret
+export VOZLOCAL_BOT_URL=https://vozlocal-bot.<you>.workers.dev
+```
+
+The URL isn't secret, so it can stay in `~/.zshrc`.
 
 Then run `voz sync`. You should see `voz sync: 1 new phrase`, and the phrase joins today's category in `voz`. New terminals sync in the background at most once an hour (`VOZLOCAL_SYNC_INTERVAL`).
 
