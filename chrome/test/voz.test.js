@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, key, knownPhrases, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, readHostReply, toHex, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -115,18 +115,46 @@ test('the bundled phrases are well formed', () => {
 });
 
 test('cleanSettings keeps good values', () => {
-  const good = { region: 'es_AR', delay: 0, learned: ['a|b'], last: 'a|b', mine: [['c', 'd']], swapped: true };
+  const good = { region: 'es_AR', delay: 0, learned: ['a|b'], last: 'a|b', mine: [['c', 'd']], swapped: true,
+    pending: [{ key: 'a|b', on: false }] };
   assert.deepEqual(cleanSettings(good), good);
 });
 
 test('cleanSettings replaces malformed values with defaults', () => {
-  const defaults = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false };
+  const defaults = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [] };
   assert.deepEqual(cleanSettings(undefined), defaults);
   assert.deepEqual(cleanSettings(null), defaults);
-  assert.deepEqual(cleanSettings({ region: 5, delay: 31, learned: 5, last: 7, mine: 'x', swapped: 'yes' }), defaults);
+  assert.deepEqual(cleanSettings({ region: 5, delay: 31, learned: 5, last: 7, mine: 'x', swapped: 'yes', pending: 1 }), defaults);
+  assert.deepEqual(cleanSettings({ pending: [null, { key: 'a|b' }, { key: '', on: true }, { key: 'c|d', on: true }] }).pending,
+    [{ key: 'c|d', on: true }]);
   assert.deepEqual(cleanSettings({ delay: 1.5 }).delay, 2);
   assert.deepEqual(cleanSettings({ delay: -1 }).delay, 2);
   assert.deepEqual(cleanSettings({ learned: ['a|b', null, 3, ''] }).learned, ['a|b']);
   assert.deepEqual(cleanSettings({ mine: [null, ['a'], ['a', ''], [1, 2], ['a', 'b', 'c'], { phrase: 'a' }, ['ok', 'fine']] }).mine,
     [['ok', 'fine']]);
+});
+
+test('toHex and fromHex round-trip UTF-8, as vozlocal-host encodes it', () => {
+  assert.equal(toHex('Che|Hey'), '4368657c486579');
+  assert.equal(toHex('¿Qué?'), 'c2bf5175c3a93f');
+  assert.equal(fromHex('c2bf5175c3a93f'), '¿Qué?');
+  for (const bad of ['', 'abc', 'zz', 'C2', 'ff', null]) assert.throws(() => fromHex(bad), bad);
+});
+
+test('readHostReply decodes learned keys and mine.psv rows', () => {
+  const reply = { ok: true, learned: [toHex('Che|Hey')], mine: [toHex('Bondi|Bus'), toHex('Guita|Money')] };
+  assert.deepEqual(readHostReply(reply), { learned: ['Che|Hey'], mine: [['Bondi', 'Bus'], ['Guita', 'Money']] });
+});
+
+test('readHostReply drops lines that are malformed or unsafe', () => {
+  const bad = ['zz', 'ff', toHex('no separator'), toHex('a|b|c'), toHex('|x'), toHex('x|'), toHex('bi\u202edi|x'), toHex('cr|x\r')];
+  assert.deepEqual(readHostReply({ ok: true, learned: [], mine: [...bad, toHex('Ok|Fine')] }),
+    { learned: [], mine: [['Ok', 'Fine']] });
+  assert.deepEqual(readHostReply({ ok: true, learned: [toHex('a|b|c'), 'zz', toHex('tab\t|x')], mine: [] }).learned, ['a|b|c']);
+});
+
+test('readHostReply refuses a failed or malformed reply', () => {
+  for (const reply of [undefined, null, {}, { ok: false, error: 'bad region' }, { ok: true, learned: 'x', mine: [] }]) {
+    assert.equal(readHostReply(reply), null);
+  }
 });

@@ -28,7 +28,11 @@ _vozlocal_category() {
 
 voz() {
   emulate -L zsh
-  [[ $1 == sync ]] && { _vozlocal_sync; return }
+  case $1 in
+    sync) _vozlocal_sync; return ;;
+    install-chrome) _vozlocal_install_chrome $2; return ;;
+    install-cron) _vozlocal_install_cron $2; return ;;
+  esac
   local data=$VOZLOCAL_HOME/data/${VOZLOCAL_REGION:-es_AR}
   # mine.psv (phrases from the WhatsApp bot) isn't a category: it joins whichever category is on today.
   local -a files=( $data/*.psv(N) )
@@ -85,9 +89,72 @@ yas() {
   [[ -f $dir/last_phrase && -r $dir/last_phrase ]] && last=$(<$dir/last_phrase)
   [[ -n $last ]] || { print -u2 "yas: no phrase to mark yet, run voz first"; return 1 }
   [[ -f $dir/learned || ! -e $dir/learned ]] || { print -u2 "yas: $dir/learned isn't a regular file"; return 1 }
-  [[ -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
-  [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned || return 1
+  # The Chrome extension changes learned too (through vozlocal-host), so take turns with it.
+  local lock
+  : >> $dir/learned.lock && zsystem flock -t 5 -f lock $dir/learned.lock || { print -u2 "yas: learned is locked"; return 1 }
+  {
+    [[ -r $dir/learned ]] && learned=( ${(f)"$(<$dir/learned)"} )
+    [[ -n ${(M)learned:#"$last"} ]] || print -r -- $last >> $dir/learned || return 1
+  } always {
+    zsystem flock -u $lock
+  }
   print -r -- "  ✓ learned: ${last%%|*}"
+}
+
+# voz install-chrome: let the Chrome extension share learned phrases and mine.psv with the terminal, through
+# vozlocal-host. Writes Chrome's host manifest and a launcher that fixes this shell's paths, since Chrome starts
+# the host without your .zshrc. Run it again after moving the repo; --remove undoes it.
+_VOZLOCAL_HOST=com.vozlocal.host
+_VOZLOCAL_EXTENSION_ID=anijgjheokodkngpcmkigapfjieeeaff  # fixed by the "key" in chrome/extension/manifest.json
+
+_vozlocal_install_chrome() {
+  emulate -L zsh
+  local hosts=$VOZLOCAL_CHROME_HOSTS
+  if [[ -z $hosts ]]; then
+    [[ $OSTYPE == darwin* ]] && hosts="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts" \
+      || hosts=${XDG_CONFIG_HOME:-$HOME/.config}/google-chrome/NativeMessagingHosts
+  fi
+  local manifest=$hosts/$_VOZLOCAL_HOST.json launcher=$hosts/$_VOZLOCAL_HOST
+  if [[ $1 == --remove ]]; then
+    rm -f $manifest $launcher && print "voz: Chrome no longer shares with the terminal"; return
+  fi
+  [[ -z $1 ]] || { print -u2 "usage: voz install-chrome [--remove]"; return 1 }
+  [[ $launcher != *[\"\\]* ]] || { print -u2 "voz: can't write a path holding \" or \\ into JSON: $launcher"; return 1 }
+  mkdir -p $hosts || return 1
+  {
+    print -r -- '#!/bin/zsh -f'
+    print -r -- '# Written by voz install-chrome: starts vozlocal-host with the paths your shell uses.'
+    [[ -n $XDG_CACHE_HOME ]] && print -r -- "export XDG_CACHE_HOME=${(qq)XDG_CACHE_HOME}"
+    print -r -- "export VOZLOCAL_HOME=${(qq)VOZLOCAL_HOME}"
+    print -r -- "exec ${(qq)VOZLOCAL_HOME}/vozlocal-host"
+  } >| $launcher && chmod 755 $launcher || return 1
+  print -r -- "{
+  \"name\": \"$_VOZLOCAL_HOST\",
+  \"description\": \"VozLocal: share learned phrases and mine.psv with the terminal\",
+  \"path\": \"$launcher\",
+  \"type\": \"stdio\",
+  \"allowed_origins\": [\"chrome-extension://$_VOZLOCAL_EXTENSION_ID/\"]
+}" >| $manifest || return 1
+  print "voz: Chrome now shares learned phrases with the terminal (reload the extension if it's open)"
+}
+
+# voz install-cron: run voz sync every 15 minutes, so phrases from the WhatsApp bot reach mine.psv (and Chrome)
+# even when no terminal is open. It runs an interactive zsh, so it sees the same settings and secrets you do.
+# --remove undoes it.
+_vozlocal_install_cron() {
+  emulate -L zsh
+  local tag='# vozlocal sync' current
+  [[ -z $1 || $1 == --remove ]] || { print -u2 "usage: voz install-cron [--remove]"; return 1 }
+  current=$(crontab -l 2>/dev/null)
+  local -a lines=( ${(f)current} )
+  lines=( ${lines:#*"$tag"} )
+  [[ $1 == --remove ]] || lines+=( "*/15 * * * * /bin/zsh -ic 'voz sync' >/dev/null 2>&1 $tag" )
+  if (( $#lines )); then
+    print -rl -- $lines | crontab - || return 1
+  else
+    crontab -r 2>/dev/null
+  fi
+  [[ $1 == --remove ]] && print "voz: stopped syncing every 15 minutes" || print "voz: syncing with the bot every 15 minutes"
 }
 
 # voz sync: append phrases confirmed in the WhatsApp bot since the last sync to mine.psv. See bot/README.md.

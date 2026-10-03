@@ -281,6 +281,99 @@ print -r -- 'path[$(touch '$TMP'/pwned)]' > $TMP/cache/vozlocal/last_shown
 check "corrupt timestamp is ignored, not evaluated" \
   "$(run_tty $load; [[ -e $TMP/pwned ]] && print PWNED)" "*→*done*~*PWNED*"
 
+# --- Chrome host (vozlocal-host) ---
+
+H=$TMP/host
+hex() { print -rn -- $1 | od -An -v -tx1 | tr -d ' \n' }
+lit() { print -rn -- ${(b)1} }  # a check pattern that matches $1 exactly
+# Frame a message the way Chrome does: its length in 4 bytes, then the message.
+frame() { local n=${#1}; printf "\\x$(( [##16] n & 255 ))\\x$(( [##16] n >> 8 & 255 ))\\x00\\x00%s" $1 }
+# Send one message to the host. Prints the reply without its 4-byte length.
+host() { frame $1 | XDG_CACHE_HOME=$H/cache VOZLOCAL_HOME=$H/home $ROOT/vozlocal-host | tail -c +5 }
+host_reset() {
+  rm -rf $H; mkdir -p $H/cache/vozlocal $H/home/data/es_AR
+  print "phrase|translation\nBondi|Bus\nno separator" > $H/home/data/es_AR/mine.psv
+  print "Che|Hey" > $H/cache/vozlocal/learned
+}
+learn() { host "{\"op\":\"learn\",\"region\":\"es_AR\",\"key\":\"$(hex $1)\",\"on\":$2}" }
+STATE='{"op":"state","region":"es_AR"}'
+
+host_reset
+check "the host sends learned phrases and mine.psv as hex" \
+  "$(host $STATE)" "$(lit "{\"ok\":true,\"learned\":[\"$(hex 'Che|Hey')\"],\"mine\":[\"$(hex 'Bondi|Bus')\"]}")"
+
+check "the host's reply starts with its length" \
+  "$(frame $STATE | XDG_CACHE_HOME=$H/cache VOZLOCAL_HOME=$H/home $ROOT/vozlocal-host \
+     | head -c 4 | od -An -tu4 | tr -d ' ')" "$(( ${#$(host $STATE)} ))"
+
+learn 'Bondi|Bus' true >/dev/null; learn 'Bondi|Bus' true >/dev/null
+check "learning through the host adds a phrase once" "$(<$H/cache/vozlocal/learned)" "$(lit $'Che|Hey\nBondi|Bus')"
+
+learn 'Che|Hey' false >/dev/null; learn 'Nope|x' false >/dev/null
+check "unlearning through the host removes only that phrase" "$(<$H/cache/vozlocal/learned)" "$(lit 'Bondi|Bus')"
+
+learn 'Bondi|Bus' false >/dev/null
+check "unlearning the last phrase leaves an empty file" \
+  "$(host $STATE); size=$(wc -c < $H/cache/vozlocal/learned | tr -d ' ')" \
+  "$(lit "{\"ok\":true,\"learned\":[],\"mine\":[\"$(hex 'Bondi|Bus')\"]}; size=0")"
+
+check "a phrase with accents round-trips through the host" \
+  "$(learn '¿Qué onda?|What'\''s up?' true)" "*\"$(hex '¿Qué onda?|What'\''s up?')\"*"
+
+host_reset
+check "the host refuses a bad region" "$(host '{"op":"state","region":"../x"}')" "$(lit '{"ok":false,"error":"bad region"}')"
+check "the host refuses an unknown op" "$(host '{"op":"rm","region":"es_AR"}')" "$(lit '{"ok":false,"error":"bad op"}')"
+check "the host refuses a key that isn't hex" \
+  "$(host '{"op":"learn","region":"es_AR","key":"abc","on":true}')" "$(lit '{"ok":false,"error":"bad key"}')"
+check "the host refuses a key without | or with a newline" \
+  "$(learn 'no separator' true; learn $'a|b\nc|d' true)" "$(lit '{"ok":false,"error":"bad key"}{"ok":false,"error":"bad key"}')"
+check "a refused change leaves learned alone" "$(<$H/cache/vozlocal/learned)" "$(lit 'Che|Hey')"
+check "the host refuses a bad length" \
+  "$(printf '\x00\x00\x00\x00' | XDG_CACHE_HOME=$H/cache VOZLOCAL_HOME=$H/home $ROOT/vozlocal-host | tail -c +5)" \
+  "$(lit '{"ok":false,"error":"bad message length"}')"
+
+rm -rf $H; mkdir -p $H/cache $H/home
+check "with no files yet, the host sends empty lists" "$(host $STATE)" "$(lit '{"ok":true,"learned":[],"mine":[]}')"
+check "the first phrase learned through the host creates learned" \
+  "$(learn 'Che|Hey' true >/dev/null; cat $H/cache/vozlocal/learned)" "$(lit 'Che|Hey')"
+
+host_reset; rm $H/cache/vozlocal/learned; mkfifo $H/cache/vozlocal/learned
+check "a FIFO where learned should be doesn't hang the host" \
+  "$(host $STATE; learn 'Bondi|Bus' true)" \
+  "$(lit "{\"ok\":true,\"learned\":[],\"mine\":[\"$(hex 'Bondi|Bus')\"]}{\"ok\":false,\"error\":\"learned is not a regular file\"}")"
+
+host_reset; print -r -- 'Bondi|Bus' >> $H/cache/vozlocal/learned
+check "yas and the host share one learned file" \
+  "$(run "XDG_CACHE_HOME=${(q)H}/cache; print -r -- 'Guita|Money' > \$XDG_CACHE_HOME/vozlocal/last_phrase; yas >/dev/null"; host $STATE)" \
+  "*\"$(hex 'Guita|Money')\"*"
+
+# --- voz install-chrome / install-cron ---
+
+C=$TMP/chrome-hosts
+check "install-chrome writes Chrome's host manifest" \
+  "$(run "VOZLOCAL_CHROME_HOSTS=${(q)C}; voz install-chrome" && cat $C/com.vozlocal.host.json)" \
+  "voz: Chrome now shares*\"name\": \"com.vozlocal.host\"*\"path\": \"$C/com.vozlocal.host\"*\"type\": \"stdio\"*\"chrome-extension://anijgjheokodkngpcmkigapfjieeeaff/\"*"
+
+host_reset; ln -s $ROOT/vozlocal-host $H/home/vozlocal-host  # the launcher runs the host in VOZLOCAL_HOME
+check "the launcher it writes runs the host with this shell's paths" \
+  "$(run "VOZLOCAL_CHROME_HOSTS=${(q)C}; XDG_CACHE_HOME=${(q)H}/cache; VOZLOCAL_HOME=${(q)H}/home; voz install-chrome >/dev/null"
+     frame $STATE | env -i HOME=/nonexistent $C/com.vozlocal.host | tail -c +5)" \
+  "$(lit "{\"ok\":true,\"learned\":[\"$(hex 'Che|Hey')\"],\"mine\":[\"$(hex 'Bondi|Bus')\"]}")"
+
+check "install-chrome --remove takes both files away" \
+  "$(run "VOZLOCAL_CHROME_HOSTS=${(q)C}; voz install-chrome --remove"; ls -A $C)" "voz: Chrome no longer shares with the terminal"
+
+# A stand-in crontab that keeps the table in a file.
+CRON="crontab() { if [[ \$1 == -l ]]; then cat ${(q)TMP}/crontab 2>/dev/null; elif [[ \$1 == -r ]]; then rm -f ${(q)TMP}/crontab; else cat > ${(q)TMP}/crontab; fi }"
+print '0 9 * * * other job' > $TMP/crontab
+check "install-cron adds one sync line and keeps other jobs, however often it runs" \
+  "$(run "$CRON; voz install-cron; voz install-cron" >/dev/null; cat $TMP/crontab)" \
+  "$(lit $'0 9 * * * other job\n*/15 * * * * /bin/zsh -ic \'voz sync\' >/dev/null 2>&1 # vozlocal sync')"
+check "install-cron --remove takes the line away" \
+  "$(run "$CRON; voz install-cron --remove" >/dev/null; cat $TMP/crontab)" "$(lit '0 9 * * * other job')"
+check "install-cron --remove on the only line clears the table" \
+  "$(print -r -- '* * * * * x # vozlocal sync' > $TMP/crontab; run "$CRON; voz install-cron --remove" >/dev/null; ls $TMP/crontab 2>&1)" "*No such file*"
+
 # --- data files ---
 
 bad=()

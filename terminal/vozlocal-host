@@ -1,0 +1,95 @@
+#!/bin/zsh -f
+# Chrome native messaging host: lets the VozLocal extension read and change the terminal's learned phrases, and
+# read mine.psv, so both share one set of files. `voz install-chrome` registers it with Chrome. See README.md.
+#
+# Chrome starts this once per message: a 4-byte length (native byte order), then that many bytes of JSON. It
+# replies the same way. Requests:
+#   {"op":"state","region":"es_AR"}
+#   {"op":"learn","region":"es_AR","key":"<hex>","on":true|false}
+# Reply: {"ok":true,"learned":["<hex>",...],"mine":["<hex>",...]} or {"ok":false,"error":"..."}.
+# Phrases travel as hex of their UTF-8 bytes, so neither side has to escape JSON strings in zsh.
+
+emulate zsh
+setopt extended_glob no_multibyte
+export LC_ALL=C
+export PATH=/usr/bin:/bin${PATH:+:$PATH}  # Chrome may start this with no PATH
+zmodload zsh/system
+
+VOZLOCAL_HOME=${VOZLOCAL_HOME:-${0:A:h}}
+dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal
+MAX_REPLY=1000000  # Chrome refuses replies over 1 MB
+
+# 4 bytes little-endian (the byte order of every Mac and PC Chrome runs on).
+send() {
+  local json=$1 n=${#1}
+  printf "\\x$(( [##16] n & 255 ))\\x$(( [##16] n >> 8 & 255 ))\\x$(( [##16] n >> 16 & 255 ))\\x$(( [##16] n >> 24 & 255 ))"
+  print -rn -- $json
+}
+fail() { send "{\"ok\":false,\"error\":\"$1\"}"; exit 0 }
+
+# Read exactly $1 bytes from stdin into REPLY.
+read_bytes() {
+  local chunk
+  REPLY=
+  while (( ${#REPLY} < $1 )); do
+    sysread -s $(( $1 - ${#REPLY} )) chunk || return 1
+    REPLY+=$chunk
+  done
+}
+
+# Lines of file $1 (from line $2 on) as hex strings, in the array `hex`. Missing or non-regular files give none.
+hex_lines() {
+  hex=()
+  [[ -f $1 && -r $1 ]] || return 0
+  local b line=
+  local -i n=1
+  for b in $(od -An -v -tx1 < $1); do
+    if [[ $b == 0a ]]; then
+      (( n++ >= $2 )) && [[ -n $line ]] && hex+=$line
+      line=
+    else
+      line+=$b
+    fi
+  done
+  (( n >= $2 )) && [[ -n $line ]] && hex+=$line
+}
+
+json_list() { print -rn -- "[${(j:,:)${(@)@/(#m)*/\"$MATCH\"}}]" }
+
+read_bytes 4 || exit 0
+b1=$REPLY[1] b2=$REPLY[2] b3=$REPLY[3] b4=$REPLY[4]
+integer len=$(( #b1 | #b2 << 8 | #b3 << 16 | #b4 << 24 ))
+(( len > 0 && len <= 65536 )) || fail 'bad message length'
+read_bytes $len || fail 'short message'
+msg=$REPLY
+
+[[ $msg =~ '"region":"([A-Za-z_]+)"' ]] && region=$match[1] || fail 'bad region'
+[[ $msg =~ '"op":"(state|learn)"' ]] && op=$match[1] || fail 'bad op'
+
+learned=$dir/learned
+if [[ $op == learn ]]; then
+  [[ $msg =~ '"key":"(([0-9a-f][0-9a-f])+)"' ]] && keyhex=$match[1] || fail 'bad key'
+  [[ $msg =~ '"on":(true|false)' ]] && on=$match[1] || fail 'bad on'
+  key=${(g::)keyhex//(#b)(??)/\\x$match[1]}
+  [[ $key != *$'\n'* && $key == *'|'* ]] || fail 'bad key'
+  [[ -f $learned || ! -e $learned ]] || fail 'learned is not a regular file'
+  mkdir -p $dir && : >> $dir/learned.lock && zsystem flock -t 5 -f lock $dir/learned.lock || fail 'learned is locked'
+  local -a lines
+  [[ -r $learned ]] && lines=( ${(f)"$(<$learned)"} )
+  if [[ $on == true ]]; then
+    [[ -n ${(M)lines:#"$key"} ]] || print -r -- $key >> $learned || fail 'could not write learned'
+  elif [[ -n ${(M)lines:#"$key"} ]]; then
+    lines=( ${lines:#"$key"} )
+    { (( ! $#lines )) || print -rl -- $lines; } >| $learned.tmp.$$ && mv -f $learned.tmp.$$ $learned \
+      || { rm -f $learned.tmp.$$; fail 'could not write learned' }
+  fi
+  zsystem flock -u $lock
+fi
+
+local -a hex learned_hex mine_hex
+hex_lines $learned 1; learned_hex=( $hex )
+hex_lines $VOZLOCAL_HOME/data/$region/mine.psv 2; mine_hex=( ${(M)hex:#*7c*} )  # 7c is |
+
+reply="{\"ok\":true,\"learned\":$(json_list $learned_hex),\"mine\":$(json_list $mine_hex)}"
+(( ${#reply} <= MAX_REPLY )) || fail 'too much to send'
+send $reply

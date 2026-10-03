@@ -51,7 +51,7 @@ export function todaysRows(region, mine, day) {
   return { category, rows: [...region[category], ...mine] };
 }
 
-const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false };
+const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [] };
 const isText = v => typeof v === 'string' && v !== '';
 
 // Stored settings with anything malformed replaced by its default, so a bad value (a sync gone wrong, an old
@@ -65,7 +65,33 @@ export function cleanSettings(stored = {}) {
     last: isText(s.last) ? s.last : null,
     mine: Array.isArray(s.mine) ? s.mine.filter(r => Array.isArray(r) && r.length === 2 && r.every(isText)) : [],
     swapped: s.swapped === true,
+    pending: Array.isArray(s.pending) ? s.pending.filter(p => isText(p?.key) && typeof p.on === 'boolean') : [],
   };
+}
+
+// The terminal's host (vozlocal-host) sends phrases as hex of their UTF-8 bytes, so it never escapes JSON.
+export const toHex = text => Array.from(new TextEncoder().encode(text), b => b.toString(16).padStart(2, '0')).join('');
+
+export function fromHex(hex) {
+  if (typeof hex !== 'string' || !/^(?:[0-9a-f]{2})+$/.test(hex)) throw new Error('not hex');
+  return new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(hex.match(/../g), h => parseInt(h, 16)));
+}
+
+// The learned keys and mine.psv rows in a host reply, or null if it isn't a good one. Lines that don't decode,
+// or that hold anything unsafe, are dropped, as voz sync drops them.
+export function readHostReply(reply) {
+  if (reply?.ok !== true || !Array.isArray(reply.learned) || !Array.isArray(reply.mine)) return null;
+  const lines = list => list.flatMap(hex => {
+    try {
+      const line = fromHex(hex);
+      return /[\p{Cc}\p{Cf}\u2028\u2029]/u.test(line) || !line.includes('|') ? [] : [line];
+    } catch { return []; }
+  });
+  const mine = lines(reply.mine).map(line => {
+    const at = line.indexOf('|');
+    return [line.slice(0, at), line.slice(at + 1)];
+  }).filter(([phrase, meaning]) => phrase && meaning && !meaning.includes('|'));
+  return { learned: lines(reply.learned), mine };
 }
 
 // Control and format characters (bidi, zero-width, soft hyphen...), line and paragraph separators, or a |.

@@ -1,9 +1,11 @@
 // The new tab: a phrase on the left, its meaning on the right after a countdown, like voz in the terminal.
-import { cleanSettings, dayNumber, key, pick, todaysRows } from './lib/voz.js';
+import { cleanSettings, dayNumber, key, pick, readHostReply, todaysRows, toHex } from './lib/voz.js';
 
 const $ = id => document.getElementById(id);
 const LANGS = { 'es-AR': 'Español (Rioplatense)', en: 'English' };
 const MAX_DOTS = 24; // a long delay still counts down, without filling the panel with dots
+const HOST = 'com.vozlocal.host';
+const HOST_WAIT_MS = 1500;
 
 let rows = [];
 let learned = new Set();
@@ -15,6 +17,52 @@ let saving = Promise.resolve();
 
 const title = name => name.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
 
+// Ask the terminal's host (vozlocal-host, set up by `voz install-chrome`). Resolves to its learned keys and
+// mine.psv rows, or rejects if it isn't installed, fails, or takes too long.
+async function askHost(message) {
+  let timeout;
+  const late = new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('no reply')), HOST_WAIT_MS); });
+  try {
+    const reply = await Promise.race([chrome.runtime.sendNativeMessage(HOST, { region: settings.region, ...message }), late]);
+    const state = readHostReply(reply);
+    if (!state) throw new Error(reply?.error ?? 'bad reply');
+    return state;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const learnMessage = ({ key: k, on }) => ({ op: 'learn', key: toHex(k), on });
+
+// The terminal's files are the truth when the host answers: send marks made while it couldn't, then read its
+// state, and keep a copy in storage for when it can't be reached. Returns false if it couldn't be reached.
+async function syncWithTerminal() {
+  try {
+    let state;
+    const pending = [...settings.pending];
+    while (pending.length) {
+      state = await askHost(learnMessage(pending[0]));
+      pending.shift();
+    }
+    state = await askHost({ op: 'state' });
+    settings = { ...settings, learned: state.learned, mine: state.mine, pending: [] };
+    await chrome.storage.local.set({ learned: state.learned, mine: state.mine, pending: [] });
+    return true;
+  } catch (error) {
+    console.warn('VozLocal: not linked to the terminal:', error.message);
+    return false;
+  }
+}
+
+function showLink(linked) {
+  const link = $('link');
+  if (linked) {
+    link.textContent = 'Shared with the terminal';
+  } else {
+    link.replaceChildren('Not shared with the terminal: run ', Object.assign(document.createElement('code'), { textContent: 'voz install-chrome' }));
+  }
+}
+
 async function start() {
   try {
     const [phrases, stored] = await Promise.all([
@@ -22,6 +70,8 @@ async function start() {
       chrome.storage.local.get(null),
     ]);
     settings = cleanSettings(stored);
+    const linked = await syncWithTerminal();
+    showLink(linked);
     learned = new Set(settings.learned);
     const region = phrases[settings.region] ?? phrases.es_AR ?? Object.values(phrases)[0] ?? {};
     const today = todaysRows(region, settings.mine, dayNumber());
@@ -90,8 +140,9 @@ function next() {
   if (rows.length) show(pick(rows, learned, current && key(current)));
 }
 
-// Other new tabs may have changed learned since this one opened, so apply the change to what's stored now,
-// one change at a time, rather than writing this tab's copy back over theirs.
+// Save the mark to the terminal's learned file through the host, one change at a time. If the host can't be
+// reached, keep it in storage and queue it for the next new tab. Either way, apply it to what's stored now
+// rather than writing this tab's copy over another tab's.
 function toggleLearned() {
   if (!current) return;
   const k = key(current);
@@ -99,9 +150,17 @@ function toggleLearned() {
   on ? learned.add(k) : learned.delete(k);
   updateLearned();
   saving = saving.then(async () => {
-    const stored = new Set(cleanSettings(await chrome.storage.local.get('learned')).learned);
-    on ? stored.add(k) : stored.delete(k);
-    await chrome.storage.local.set({ learned: [...stored] });
+    try {
+      const state = await askHost(learnMessage({ key: k, on }));
+      await chrome.storage.local.set({ learned: state.learned, mine: state.mine });
+      showLink(true);
+    } catch {
+      const stored = cleanSettings(await chrome.storage.local.get(['learned', 'pending']));
+      const marks = new Set(stored.learned);
+      on ? marks.add(k) : marks.delete(k);
+      await chrome.storage.local.set({ learned: [...marks], pending: [...stored.pending, { key: k, on }] });
+      showLink(false);
+    }
   }).catch(error => console.warn('VozLocal could not save learned:', error));
 }
 

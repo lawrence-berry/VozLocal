@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'digest'
+require 'fileutils'
+require 'open3'
 require 'json'
 require 'playwright'
 require 'tmpdir'
@@ -10,9 +12,12 @@ module ExtensionHelpers
   EXTENSION = File.expand_path('../../extension', __dir__)
   PHRASES = JSON.parse(File.read(File.join(EXTENSION, 'data', 'phrases.json')))
 
-  # Chrome derives an unpacked extension's id from its path: SHA-256, first 32 hex digits, 0-f mapped to a-p.
+  TERMINAL = File.expand_path('../../../terminal', __dir__)
+
+  # The manifest's "key" fixes the id: SHA-256 of the key, first 32 hex digits, 0-f mapped to a-p.
   def self.extension_id
-    Digest::SHA256.hexdigest(EXTENSION)[0, 32].tr('0-9a-f', 'a-p')
+    key = JSON.parse(File.read(File.join(EXTENSION, 'manifest.json'))).fetch('key')
+    Digest::SHA256.hexdigest(key.unpack1('m'))[0, 32].tr('0-9a-f', 'a-p')
   end
 
   NEWTAB = "chrome-extension://#{extension_id}/newtab.html".freeze
@@ -20,6 +25,8 @@ module ExtensionHelpers
   def self.included(base)
     base.around do |example|
       Dir.mktmpdir do |profile|
+        @profile = profile
+        link_terminal if example.metadata[:terminal]
         Playwright.create(playwright_cli_executable_path: 'playwright') do |playwright|
           @context = playwright.chromium.launch_persistent_context(
             profile,
@@ -40,6 +47,31 @@ module ExtensionHelpers
   end
 
   attr_reader :page
+
+  # A pretend terminal for the host to read: its cache (learned) and data (mine.psv), outside the repo.
+  def terminal_cache = File.join(@profile, 'terminal', 'cache')
+  def terminal_home = File.join(@profile, 'terminal', 'home')
+  def learned_file = File.join(terminal_cache, 'vozlocal', 'learned')
+  def learned_lines = File.exist?(learned_file) ? File.read(learned_file).lines(chomp: true) : []
+
+  def write_terminal(learned: [], mine: [])
+    FileUtils.mkdir_p([File.dirname(learned_file), File.join(terminal_home, 'data', 'es_AR')])
+    File.write(learned_file, learned.map { |line| "#{line}\n" }.join)
+    File.write(File.join(terminal_home, 'data', 'es_AR', 'mine.psv'),
+               (['phrase|translation'] + mine.map { |row| row.join('|') }).map { |line| "#{line}\n" }.join)
+    target = File.join(terminal_home, 'vozlocal-host')
+    File.symlink(File.join(TERMINAL, 'vozlocal-host'), target) unless File.exist?(target)
+  end
+
+  # Register the host with this profile's Chromium the way a user would: `voz install-chrome`.
+  def link_terminal
+    write_terminal unless File.exist?(terminal_home)
+    hosts = File.join(@profile, 'NativeMessagingHosts')
+    script = "source #{File.join(TERMINAL, 'vozlocal.plugin.zsh')} >/dev/null; VOZLOCAL_CHROME_HOSTS=#{hosts} " \
+             "XDG_CACHE_HOME=#{terminal_cache} VOZLOCAL_HOME=#{terminal_home} voz install-chrome"
+    out, status = Open3.capture2e('zsh', '-fc', script)
+    raise "voz install-chrome failed: #{out}" unless status.success?
+  end
 
   # Open the new tab, after putting `settings` in chrome.storage.local.
   def open_newtab(**settings)
