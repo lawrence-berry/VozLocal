@@ -44,7 +44,7 @@ Business portfolio  (business.facebook.com)
 │   ├── App ID, App secret ................... APP_SECRET
 │   ├── Webhook: callback URL + verify token . VERIFY_TOKEN
 │   │   └── Webhook fields: messages ✔  (must be subscribed separately)
-│   └── Recipient list (test number only: up to 5 verified numbers)
+│   └── Recipient list (test number only: a few verified numbers, 5 when we checked)
 ├── WhatsApp Business Account ("WABA")
 │   ├── Phone number +1 555-…  ............... PHONE_NUMBER_ID (its ID, not the number)
 │   └── Subscribed apps: vozLocal ✔  (must be linked separately)
@@ -414,7 +414,7 @@ Every check passes secrets to `curl` through its config on stdin, so none appear
 | Register fails with **`133005`** (PIN mismatch) | The number already has a two-step PIN and you sent a different one | Use the PIN you set before. If it's lost, reset two-step verification for the number in WhatsApp Manager |
 | Register fails with **`133016`** | More than 10 register calls in 72 hours | Wait out the 72-hour block. Fix the underlying error before trying again |
 | `hello_world` fails with **`131030`** (recipient not in allowed list) | Your number isn't on the test number's recipient list, or isn't verified yet | Section 8 |
-| Phone says the test number **isn't on WhatsApp** | Unregistered number, or you tried to message a test number first | Section 7, then section 12 (send `hello_world` first) |
+| Phone says the test number **isn't on WhatsApp** | Unregistered number (possibly also: messaging the test number before it has messaged you) | Section 7, then section 12 (send `hello_world` first) |
 | **Verify and save** fails in Meta | Worker not deployed yet, URL wrong (needs `/webhook`), or `VERIFY_TOKEN` differs between Meta and Cloudflare | Section 14 webhook-token check; re-upload secrets (11) |
 | You message the bot and **nothing happens**, and `wrangler tail` shows no requests | Meta isn't delivering: no **messages** field subscribed, or the app isn't in the WABA's **subscribed apps** | Sections 9 and 10. Check both with section 14 |
 | `wrangler tail` shows requests returning **401** | `APP_SECRET` in Cloudflare doesn't match the app's secret | Copy it again (section 5), then re-upload (11) |
