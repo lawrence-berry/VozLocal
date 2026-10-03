@@ -76,7 +76,7 @@ export function readSyncRows(bytes, have) {
     start = i + 1;
     let digits = 0;
     while (lineBytes[digits] >= 0x30 && lineBytes[digits] <= 0x39) digits++;
-    if (digits && lineBytes[digits] === 0x7c) maxId = Math.max(maxId, Number(String.fromCharCode(...lineBytes.subarray(0, digits))));
+    if (digits && lineBytes[digits] === 0x7c) maxId = Math.max(maxId, Number(decoder.decode(lineBytes.subarray(0, digits))));
     let line;
     try { line = decoder.decode(lineBytes); } catch { continue; }
     const m = ROW.exec(line);
