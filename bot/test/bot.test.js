@@ -38,11 +38,11 @@ beforeEach(() => {
 });
 
 let nextId = 0;
-function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}` } = {}) {
+function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}`, ctx } = {}) {
   const message = { from, id, type, ...(type === 'text' ? { text: { body: text } } : {}) };
   const body = JSON.stringify({ entry: [{ changes: [{ value: { messages: [message] } }] }] });
   const sig = 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
-  return worker.fetch(new Request('https://bot.test/webhook', { method: 'POST', body, headers: { 'X-Hub-Signature-256': sig } }), env);
+  return worker.fetch(new Request('https://bot.test/webhook', { method: 'POST', body, headers: { 'X-Hub-Signature-256': sig } }), env, ctx);
 }
 const say = async (text, opts) => { sent = []; await webhook(text, opts); return sent.at(-1)?.text.body; };
 const phrases = (since = '0', token = env.SYNC_TOKEN) =>
@@ -111,7 +111,8 @@ test('non-text messages get the format help', async () => {
 test('parse refuses lines that would break a .psv file or the terminal', () => {
   assert.deepEqual(parse('Che = Hey'), { phrase: 'Che', translation: 'Hey' });
   assert.deepEqual(parse('a = b = c'), { phrase: 'a', translation: 'b = c' });
-  for (const bad of ['', 'no separator', ' = meaning', 'phrase = ', 'a = b | c', 'a = b\nc', 'a = \x1b[31mred', `${'x'.repeat(201)} = y`]) {
+  for (const bad of ['', 'no separator', ' = meaning', 'phrase = ', 'a = b | c', 'a = b\nc', 'a = \x1b[31mred', 'a = \u009b31m',
+    'a\u202e = b', 'a\u200b = b', 'a\ufeffb = c', 'a = b\u2028c', `${'x'.repeat(201)} = y`]) {
     assert.ok(parse(bad).error, JSON.stringify(bad));
   }
 });
@@ -128,4 +129,48 @@ test('webhook verification echoes the challenge only with the right token', asyn
   const verify = token => worker.fetch(new Request(`https://bot.test/webhook?hub.mode=subscribe&hub.verify_token=${token}&hub.challenge=42`), env);
   assert.equal(await (await verify('verify-me')).text(), '42');
   assert.equal((await verify('nope')).status, 403);
+});
+
+test('a confirmed phrase survives a failed store: the retried yes saves it', async () => {
+  await say('Bondi = Bus');
+  const db = env.DB;
+  let fail = true;
+  env.DB = { prepare(sql) {
+    if (fail && sql.startsWith('INSERT INTO phrases')) { fail = false; return { bind: () => ({ run: async () => { throw new Error('D1 hiccup'); } }) }; }
+    return db.prepare(sql);
+  } };
+  await assert.rejects(webhook('yes', { id: 'wamid.flaky' }), /D1 hiccup/);
+  assert.equal(await say('yes', { id: 'wamid.flaky' }), 'Saved: Bondi → Bus');
+});
+
+test('a preview lapses after ten minutes', async () => {
+  await say('Bondi = Bus');
+  await env.DB.prepare('UPDATE pending SET created_at = created_at - 601').run();
+  assert.match(await say('yes'), /^Nothing to save/);
+  assert.equal(await (await phrases()).text(), '');
+});
+
+test('a new phrase says which pending one it replaced', async () => {
+  await say('Bondi = Bus');
+  assert.match(await say('Che = Hey'), /^Discarded: Bondi\nSave this phrase\?\nChe → Hey/);
+});
+
+test('non-ASCII text passes the signature check and is stored as sent', async () => {
+  await say('Ñandú = Rhea'); await say('sí');
+  assert.equal(await (await phrases()).text(), '1|Ñandú|Rhea\n');
+});
+
+test('replies are handed to waitUntil when the runtime offers it', async () => {
+  const later = [];
+  const res = await webhook('Bondi = Bus', { ctx: { waitUntil: p => later.push(p) } });
+  assert.equal(res.status, 200);
+  assert.equal(later.length, 1);
+  await Promise.all(later);
+  assert.match(sent.at(-1).text.body, /^Save this phrase/);
+});
+
+test('old message ids are forgotten', async () => {
+  await env.DB.prepare('INSERT INTO seen (message_id, created_at) VALUES (?, ?)').bind('wamid.old', 0).run();
+  await say('Bondi = Bus');
+  assert.equal(await env.DB.prepare('SELECT 1 FROM seen WHERE message_id = ?').bind('wamid.old').first(), null);
 });

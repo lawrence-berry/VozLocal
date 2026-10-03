@@ -119,6 +119,33 @@ reset_sync; print "x|a|b\n1|a|b|c\n2|esc"$'\e'"[31m|red\n3|ok|fine" > $TMP/reply
 check "voz sync drops malformed and hostile rows" \
   "$(run "$S; voz sync"; cat $MINE $TMP/sync/vozlocal/sync_last_id)" $'voz sync: 1 new phrase\nphrase?translation\nok?fine\n3'
 
+for loc in C en_US.UTF-8; do
+  reset_sync; printf '1|ok|fine\n2|sí|yes\n3|c1\302\233x|x\n4|bidi\342\200\256x|x\n5|bom\357\273\277x|x\n6|zw\342\200\213x|x\n7|bad\377x|x\n8|nul\001x|x\n' > $TMP/reply
+  check "voz sync drops C1, bidi, zero-width and invalid UTF-8 rows ($loc)" \
+    "$(run "$S; LC_ALL=$loc voz sync"; cat $MINE $TMP/sync/vozlocal/sync_last_id)" \
+    $'voz sync: 2 new phrases\nphrase?translation\nok?fine\nsí?yes\n8'
+done
+
+reset_sync; print "1|Bondi|Bus" > $TMP/reply
+check "voz sync works with mv, rm, mkdir and cat aliased" \
+  "$(zsh -fc "alias mv='mv -i' rm='rm -i' mkdir='mkdir -v' cat='cat -n'; $SETUP; $S; voz sync; print '2|Che|Hey' >| \$VOZLOCAL_HOME/reply; voz sync </dev/null" 2>&1; command cat $MINE)" \
+  $'voz sync: 1 new phrase\nvoz sync: 1 new phrase\nphrase?translation\nBondi?Bus\nChe?Hey'
+
+check "sourcing the plugin leaves the user's aliases on" \
+  "$(zsh -fc "alias ll='ls -l'; source ${(q)PLUGIN} >/dev/null; [[ -o aliases ]] && alias ll")" "ll='ls -l'"
+
+reset_sync; print "1|Bondi|Bus" > $TMP/reply; mkdir -p $TMP/sync/vozlocal
+zsh -fc "zmodload zsh/system; : >> $TMP/sync/vozlocal/sync.lock; zsystem flock $TMP/sync/vozlocal/sync.lock; sleep 2" &
+sleep 0.5
+check "a second voz sync waits its turn" "$(run "$S; voz sync; print rc=\$?")" $'voz sync: already running\nrc=1'
+wait
+check "a lock left by a finished sync doesn't block the next one" "$(run "$S; voz sync")" "voz sync: 1 new phrase"
+
+reset_sync; mkdir -p $TMP/back\\slash
+check "a backslash in XDG_CACHE_HOME doesn't break learned phrases" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/back\\\\slash; VOZLOCAL_REGION=two; voz >/dev/null; yas >/dev/null; l=\$(<\$XDG_CACHE_HOME/vozlocal/learned); [[ \$(repeat 20 voz) == *\${l%%|*}* ]] && print SHOWN || print OK")" "OK"
+rm -rf $TMP/back\\slash
+
 reset_sync; print "phrase|translation\nmine|kept" > $MINE
 check "a failed sync leaves mine.psv and the last id alone" \
   "$(run "$S; voz sync; print rc=\$?"; cat $MINE; [[ -e $TMP/sync/vozlocal/sync_last_id ]] && print MOVED)" \
@@ -141,6 +168,9 @@ check "opening a terminal syncs in the background" "$(run_tty $auto; cat $MINE)"
 rm -f $TMP/curl.args
 check "a second terminal within VOZLOCAL_SYNC_INTERVAL doesn't sync again" \
   "$(run_tty $auto; [[ -e $TMP/curl.args ]] && print SYNCED)" "*~*SYNCED*"
+reset_sync
+check "a failed background sync lets the next terminal retry" \
+  "$(run_tty $auto; [[ -e $TMP/sync/vozlocal/last_synced ]] && print STAMPED)" "*~*STAMPED*"
 reset_sync
 
 # --- daily category rotation ---

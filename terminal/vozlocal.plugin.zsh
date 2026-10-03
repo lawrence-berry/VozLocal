@@ -1,7 +1,13 @@
 # vozlocal: show a Spanish phrase, pause, then reveal the translation. See README.md.
 
+# Parse this file with aliases off. zsh expands aliases when a function is defined, so a user's
+# `alias mv='mv -i'` would otherwise end up inside these functions. Restored at the end of the file.
+'builtin' 'typeset' '-gi' '_vozlocal_aliases=0'
+[[ -o aliases ]] && _vozlocal_aliases=1
+'builtin' 'setopt' 'no_aliases'
+
 VOZLOCAL_HOME=${${(%):-%x}:A:h}
-zmodload zsh/datetime
+zmodload zsh/datetime zsh/system
 
 # REPLY = value of variable $1 if it's a whole number, else $2. Guards $(( )), which evaluates code.
 _vozlocal_int() {
@@ -37,8 +43,9 @@ voz() {
   # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned.
   # Read $RANDOM here, not inside $( ): subshells all see the same value, so repeated voz calls would repeat.
   local seed=$RANDOM
-  line=$(awk -v seed=$seed -v learned=$dir/learned '
-    FILENAME == learned { done[$0]; next }
+  # Paths go through ENVIRON: awk -v would treat a backslash in them as an escape.
+  line=$(VOZ_LEARNED=$dir/learned awk -v seed=$seed '
+    FILENAME == ENVIRON["VOZ_LEARNED"] { done[$0]; next }
     FNR > 1 && /\|/ { all[++n] = $0; if (!($0 in done)) todo[++m] = $0 }
     END { srand(seed); if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1] }' $src)
   [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
@@ -77,37 +84,44 @@ _vozlocal_sync() {
     print -u2 "voz sync: VOZLOCAL_BOT_TOKEN may only hold letters, digits, . _ and -"; return 1 }
 
   local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal data=$VOZLOCAL_HOME/data/${VOZLOCAL_REGION:-es_AR}
-  local mine=$data/mine.psv since=0 result
+  local mine=$data/mine.psv since=0 result lock
   mkdir -p $dir $data || return 1
-  # One sync at a time: terminals opening together would otherwise append the same phrases twice.
-  local -a stale=( $dir/sync.lock(N/mm+10) )
-  (( $#stale )) && rmdir $dir/sync.lock
-  mkdir $dir/sync.lock 2>/dev/null || { print -u2 "voz sync: already running"; return 1 }
+  # One sync at a time. The kernel drops the lock when its holder exits, so a killed sync can't leave it stuck.
+  : >> $dir/sync.lock && zsystem flock -t 0 -f lock $dir/sync.lock 2>/dev/null || { print -u2 "voz sync: already running"; return 1 }
+  local fetched=$dir/sync.in.$$ fresh=$dir/sync.new.$$ tmp=$mine.tmp.$$
   {
     [[ -r $dir/sync_last_id ]] && since=$(<$dir/sync_last_id)
     [[ $since == <-> ]] || since=0
     print -r -- "header = \"Authorization: Bearer $VOZLOCAL_BOT_TOKEN\"" \
-      | curl -fsS --max-time 15 -K - --url "${VOZLOCAL_BOT_URL%/}/phrases?since=$since" >| $dir/sync.in \
+      | curl -fsS --max-time 15 -K - --url "${VOZLOCAL_BOT_URL%/}/phrases?since=$since" >| $fetched \
       || { print -u2 "voz sync: could not reach the bot"; return 1 }
 
-    # Rows are `id|phrase|translation`. Keep well-formed ones whose phrase isn't in the region yet.
+    # Rows are `id|phrase|translation`. Keep well-formed ones whose phrase isn't in the region yet. awk runs on
+    # bytes (LC_ALL=C) so a malformed row can't make it fail, and drops rows holding control characters (C0, C1),
+    # bidi or zero-width marks, or anything that isn't valid UTF-8, which would break voz's own awk later.
     local -a files=( $data/*.psv(N) )
-    result=$(awk -F'|' -v incoming=$dir/sync.in -v out=$dir/sync.new '
-      FILENAME != incoming { if (FNR > 1) have[$1]; next }
+    result=$(LC_ALL=C VOZ_IN=$fetched VOZ_OUT=$fresh awk -F'|' '
+      BEGIN {
+        utf8 = "^([\001-\177]|[\302-\337][\200-\277]|\340[\240-\277][\200-\277]|[\341-\354\356\357][\200-\277][\200-\277]|" \
+               "\355[\200-\237][\200-\277]|\360[\220-\277][\200-\277][\200-\277]|[\361-\363][\200-\277][\200-\277][\200-\277]|" \
+               "\364[\200-\217][\200-\277][\200-\277])*$"
+      }
+      FILENAME != ENVIRON["VOZ_IN"] { if (FNR > 1) have[$1]; next }
       /^[0-9]+\|/ && $1 + 0 > max { max = $1 + 0 }
-      /^[0-9]+\|[^|]+\|[^|]+$/ && !/[[:cntrl:]]/ && !($2 in have) { have[$2]; print $2 "|" $3 > out; n++ }
-      END { print max + 0, n + 0 }' $files $dir/sync.in) || return 1
+      !/^[0-9]+\|[^|]+\|[^|]+$/ || $0 !~ utf8 { next }
+      /[\001-\037\177]|\302[\200-\237]|\342\200[\213-\217\250-\256]|\342\201[\240-\244\246-\251]|\357\273\277/ { next }
+      !($2 in have) { have[$2]; print $2 "|" $3 > ENVIRON["VOZ_OUT"]; n++ }
+      END { print max + 0, n + 0 }' $files $fetched) || return 1
     local -a r=( ${=result} )
 
     if (( r[2] )); then
-      { [[ -r $mine ]] && cat $mine || print phrase\|translation; cat $dir/sync.new } >| $mine.tmp \
-        && mv $mine.tmp $mine || return 1
+      { [[ -r $mine ]] && cat $mine || print phrase\|translation; cat $fresh } >| $tmp && mv -f $tmp $mine || return 1
     fi
     (( r[1] > since )) && print $r[1] >| $dir/sync_last_id
     (( r[2] )) && print "voz sync: $r[2] new phrase$([[ $r[2] == 1 ]] || print s)" || print "voz sync: up to date"
   } always {
-    rm -f $dir/sync.in $dir/sync.new $mine.tmp
-    rmdir $dir/sync.lock 2>/dev/null
+    rm -f $fetched $fresh $tmp
+    zsystem flock -u $lock
   }
 }
 
@@ -122,8 +136,9 @@ _vozlocal_sync() {
     [[ $synced == <-> ]] || synced=0
     _vozlocal_int VOZLOCAL_SYNC_INTERVAL 60
     if (( EPOCHSECONDS - synced >= REPLY * 60 )); then
+      # Stamped up front so terminals opening together don't all sync; cleared on failure so the next one retries.
       mkdir -p $dir && print $EPOCHSECONDS >| $dir/last_synced
-      _vozlocal_sync >/dev/null 2>&1 &!
+      { _vozlocal_sync || rm -f $dir/last_synced } >/dev/null 2>&1 &!
     fi
   fi
 
@@ -135,3 +150,6 @@ _vozlocal_sync() {
   mkdir -p ${stamp:h} && print $EPOCHSECONDS >| $stamp
   voz
 }
+
+(( _vozlocal_aliases )) && 'builtin' 'setopt' 'aliases'
+'builtin' 'unset' '_vozlocal_aliases'

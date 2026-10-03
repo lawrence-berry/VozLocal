@@ -177,7 +177,8 @@ VozLocal is small, but it's written like it will run inside someone else's shell
 - **Recovers from interruptions.** Pressing Ctrl-C during the countdown clears the line and exits with the standard status code `130`.
 - **Copes with messy data.** Blank lines and lines without a separator are skipped.
 - **Keeps the daily order stable.** The daily category comes from a Fisher–Yates shuffle seeded by the current cycle number. Every shell on your machine agrees on today's category, and no state has to be stored.
-- **Syncs safely.** `voz sync` runs in the background and never holds up your prompt. A lock stops two terminals from syncing at once, the token reaches `curl` on stdin rather than the command line, and rows with control characters or extra separators are dropped. A failed sync leaves `mine.psv` untouched.
+- **Syncs safely.** `voz sync` runs in the background and never holds up your prompt. A file lock stops two terminals from syncing at once, and the system releases it if a sync is killed. The token reaches `curl` on stdin rather than the command line. Rows with control characters, bidi or zero-width marks, invalid UTF-8 or extra separators are dropped. A failed sync leaves `mine.psv` untouched, and the next terminal tries again.
+- **Ignores your aliases.** The plugin is parsed with aliases off, so an `alias mv='mv -i'` or `alias cat='bat'` in your `.zshrc` can't change what its commands do.
 - **Uses few processes.** It reads the time from zsh's built-in `$EPOCHSECONDS` rather than starting `date`. Its state lives in `$XDG_CACHE_HOME` (default `~/.cache/vozlocal/`): timestamps, the last phrase shown, the list of learned phrases, and the id of the last synced phrase. Delete the `learned` file there to start over.
 
 ---
@@ -190,7 +191,7 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 35 checks in about 9 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 43 checks in about 12 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
 
 The WhatsApp bot has its own tests, which need only Node 22.5 or newer:
 
