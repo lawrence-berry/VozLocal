@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
+ALLOWED_NUMBERS=447700900123        # your WhatsApp number, digits only; comma-separate several
+APP_SECRET=                         # Meta app > App settings > Basic > App secret
+VERIFY_TOKEN=                       # any random string; paste the same into Meta's webhook setup
+WHATSAPP_TOKEN=                     # a permanent system-user access token
+PHONE_NUMBER_ID=                    # WhatsApp > API setup > Phone number ID
+SYNC_TOKEN=                         # any random string; the same goes in VOZLOCAL_BOT_TOKEN

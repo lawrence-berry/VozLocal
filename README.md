@@ -59,11 +59,17 @@ Each day has one featured category, and every category comes up once before any 
 ### 🔁 Available on demand
 Want another one? Type `voz` at any time for a new phrase from today's category.
 
+### ✅ Mark phrases as learned
+Know a phrase already? Type `yas` right after it appears and VozLocal won't pick it again. If you learn every phrase in a category, its phrases come back so you can keep reviewing.
+
+### 📱 Add phrases from WhatsApp
+Heard something new in a café? Message your VozLocal bot on WhatsApp, for example `Bondi = Bus`, and reply `yes` to its preview. The next time a terminal opens, the phrase is synced into your rotation. The bot is optional and you host it yourself; see [bot/README.md](bot/README.md).
+
 ### 🌍 Add your own regions
 Phrases are stored as plain text files, one folder per region. To add Mexican slang, Castilian idioms or a whole new language, create a folder and a few files. You don't need to change any code.
 
 ### 🪶 Lightweight
-It's a single zsh file that only uses standard tools: `zsh`, `awk`, `sleep` and `mkdir`. These are already on every Mac, and most Linux systems only need zsh added (see [Requirements](#requirements)). There's no Homebrew formula, no runtime and no network access.
+It's a single zsh file that only uses standard tools: `zsh`, `awk`, `sleep` and `mkdir`. These are already on every Mac, and most Linux systems only need zsh added (see [Requirements](#requirements)). There's no Homebrew formula and no runtime, and it never touches the network unless you set up the WhatsApp bot.
 
 ---
 
@@ -115,6 +121,8 @@ echo 'source ~/VozLocal/terminal/vozlocal.plugin.zsh' >> ~/.zshrc
 |---|---|
 | *(open a terminal)* | Shows a phrase automatically, at most once per interval |
 | `voz` | Shows a new phrase from today's category straight away |
+| `yas` | Marks the last phrase shown as learned, so it stops coming up |
+| `voz sync` | Fetches phrases you've confirmed in the WhatsApp bot (also runs in the background when a terminal opens) |
 
 ---
 
@@ -127,6 +135,9 @@ Everything is optional. Set these in your `~/.zshrc` **before** the `source` lin
 | `VOZLOCAL_REGION` | `es_AR` | Which folder under `terminal/data/` to read phrases from |
 | `VOZLOCAL_DELAY` | `2` | Seconds to wait before showing the translation. Use `0` to show it straight away |
 | `VOZLOCAL_INTERVAL` | `30` | Minimum minutes between automatic phrases. Use `0` to show one in every new shell |
+| `VOZLOCAL_BOT_URL` | *(unset)* | Your WhatsApp bot's address. Leave unset to keep VozLocal fully offline |
+| `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`, used by `voz sync` |
+| `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
 
 For example, for a longer pause and a phrase in every new tab:
 ```sh
@@ -149,6 +160,7 @@ Fiaca|Laziness (tengo fiaca = I don't feel like doing anything)
 
 - **Add a phrase:** add a line to any `.psv` file.
 - **Add a category:** add a new `.psv` file. It joins the daily rotation automatically.
+- **Phrases from WhatsApp** land in `mine.psv`. It isn't a category of its own: its phrases are mixed into whichever category is on today. It's gitignored, so your phrases stay on your machine.
 - **Add a region:** create `terminal/data/<region>/` with its own `.psv` files, then set `VOZLOCAL_REGION=<region>`.
 
 The pipe character was chosen because phrases often contain commas (*"Dale, nos vemos en un rato."*). With a pipe, the files stay readable and need no quoting.
@@ -165,7 +177,9 @@ VozLocal is small, but it's written like it will run inside someone else's shell
 - **Recovers from interruptions.** Pressing Ctrl-C during the countdown clears the line and exits with the standard status code `130`.
 - **Copes with messy data.** Blank lines and lines without a separator are skipped.
 - **Keeps the daily order stable.** The daily category comes from a Fisher–Yates shuffle seeded by the current cycle number. Every shell on your machine agrees on today's category, and no state has to be stored.
-- **Uses few processes.** It reads the time from zsh's built-in `$EPOCHSECONDS` rather than starting `date`. The only state it keeps is one timestamp in `$XDG_CACHE_HOME` (default `~/.cache/vozlocal/`).
+- **Syncs safely.** `voz sync` runs in the background and never holds up your prompt. A file lock stops two terminals from syncing at once, and the system releases it if a sync is killed. The token reaches `curl` on stdin rather than the command line. Rows with control characters, bidi or zero-width marks, invalid UTF-8 or extra separators are dropped. A failed sync leaves `mine.psv` untouched, and the next terminal tries again.
+- **Ignores your aliases.** The plugin is parsed with aliases off, so an `alias mv='mv -i'` or `alias cat='bat'` in your `.zshrc` can't change what its commands do.
+- **Uses few processes.** It reads the time from zsh's built-in `$EPOCHSECONDS` rather than starting `date`. Its state lives in `$XDG_CACHE_HOME` (default `~/.cache/vozlocal/`): timestamps, the last phrase shown, the list of learned phrases, and the id of the last synced phrase. Delete the `learned` file there to start over.
 
 ---
 
@@ -177,7 +191,13 @@ The test suite is plain zsh, so there's nothing to install:
 zsh terminal/tests/run.zsh
 ```
 
-It runs 17 checks in about 7 seconds. They cover the phrase-and-reveal flow, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+It runs 45 checks in about 12 seconds. They cover the phrase-and-reveal flow, marking phrases as learned, syncing from the WhatsApp bot, the daily category rotation, automatic display in real (pseudo-terminal) shells, Ctrl-C handling, command-injection attempts through settings and the timestamp file, and the format of every shipped phrase file. It exits with a non-zero status if anything fails, so it can go straight into CI.
+
+The WhatsApp bot has its own tests, which need only Node 22.5 or newer:
+
+```sh
+node --test bot/test
+```
 
 ---
 
@@ -186,7 +206,7 @@ It runs 17 checks in about 7 seconds. They cover the phrase-and-reveal flow, the
 VozLocal starts in the terminal, but it's designed to reach you wherever you are.
 
 - **🌐 Chrome new tab page.** A browser extension that shows the day's phrase every time you open a new tab, using the same phrase data and daily rotation as the terminal.
-- **📱 Add phrases from your phone.** Heard a new expression in a café? Save it on the spot. It will show up in your terminal and browser, backed by a shared phrase database.
+- **📱 Phrases from your phone, everywhere.** The WhatsApp bot already brings phrases to the terminal. Next, the same phrases in the browser, backed by a shared phrase database.
 - ** Speach mode? **
 
 ---
