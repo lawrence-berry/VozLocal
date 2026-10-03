@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, dayNumber, key, knownPhrases, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, key, knownPhrases, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -112,4 +112,21 @@ test('the bundled phrases are well formed', () => {
       }
     }
   }
+});
+
+test('cleanSettings keeps good values', () => {
+  const good = { region: 'es_AR', delay: 0, learned: ['a|b'], last: 'a|b', mine: [['c', 'd']], swapped: true };
+  assert.deepEqual(cleanSettings(good), good);
+});
+
+test('cleanSettings replaces malformed values with defaults', () => {
+  const defaults = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false };
+  assert.deepEqual(cleanSettings(undefined), defaults);
+  assert.deepEqual(cleanSettings(null), defaults);
+  assert.deepEqual(cleanSettings({ region: 5, delay: 31, learned: 5, last: 7, mine: 'x', swapped: 'yes' }), defaults);
+  assert.deepEqual(cleanSettings({ delay: 1.5 }).delay, 2);
+  assert.deepEqual(cleanSettings({ delay: -1 }).delay, 2);
+  assert.deepEqual(cleanSettings({ learned: ['a|b', null, 3, ''] }).learned, ['a|b']);
+  assert.deepEqual(cleanSettings({ mine: [null, ['a'], ['a', ''], [1, 2], ['a', 'b', 'c'], { phrase: 'a' }, ['ok', 'fine']] }).mine,
+    [['ok', 'fine']]);
 });

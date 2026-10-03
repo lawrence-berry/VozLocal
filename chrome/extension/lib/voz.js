@@ -51,6 +51,23 @@ export function todaysRows(region, mine, day) {
   return { category, rows: [...region[category], ...mine] };
 }
 
+const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false };
+const isText = v => typeof v === 'string' && v !== '';
+
+// Stored settings with anything malformed replaced by its default, so a bad value (a sync gone wrong, an old
+// version's data) can't break the page. mine keeps only [phrase, meaning] pairs of non-empty strings.
+export function cleanSettings(stored = {}) {
+  const s = stored ?? {};
+  return {
+    region: isText(s.region) ? s.region : DEFAULTS.region,
+    delay: Number.isInteger(s.delay) && s.delay >= 0 && s.delay <= 30 ? s.delay : DEFAULTS.delay,
+    learned: Array.isArray(s.learned) ? s.learned.filter(isText) : [],
+    last: isText(s.last) ? s.last : null,
+    mine: Array.isArray(s.mine) ? s.mine.filter(r => Array.isArray(r) && r.length === 2 && r.every(isText)) : [],
+    swapped: s.swapped === true,
+  };
+}
+
 // Control and format characters (bidi, zero-width, soft hyphen...), line and paragraph separators, or a |.
 // The bot refuses the same set. It's a little wider than voz sync's byte list, which can't matter in practice.
 const UNSAFE = /[|\p{Cc}\p{Cf}\u2028\u2029]/u;

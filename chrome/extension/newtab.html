@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Tab</title>
+  <link rel="icon" href="icons/icon32.png">
+  <link rel="stylesheet" href="newtab.css">
+  <script type="module" src="newtab.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <img class="logo" src="icons/icon48.png" alt="">
+    <span class="brand">VozLocal</span>
+  </header>
+
+  <main>
+    <div class="chips">
+      <span class="chip" id="category-chip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>
+        <span id="category">Today</span>
+      </span>
+    </div>
+
+    <section class="translator" aria-label="Phrase">
+      <div class="langbar">
+        <div class="lang"><span class="tab" id="lang-left">Español (Rioplatense)</span></div>
+        <button class="icon-btn" id="swap" type="button" title="Swap languages (S)" aria-label="Swap languages">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+        </button>
+        <div class="lang"><span class="tab" id="lang-right">English</span></div>
+      </div>
+
+      <div class="panels">
+        <div class="panel source">
+          <p class="text" id="left-text"></p>
+        </div>
+        <div class="panel target" id="target">
+          <p class="text" id="right-text" aria-live="polite"></p>
+          <p class="dots" id="dots" aria-hidden="true"></p>
+          <div class="actions">
+            <button class="icon-btn" id="learned" type="button" aria-pressed="false" title="Mark as learned (L)" aria-label="Mark as learned">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </button>
+            <button class="icon-btn" id="next" type="button" title="Next phrase (N)" aria-label="Next phrase">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="hint"><kbd>Space</kbd> reveal, then next · <kbd>N</kbd> next · <kbd>L</kbd> learned · <kbd>S</kbd> swap</p>
+  </main>
+</body>
+</html>
