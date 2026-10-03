@@ -41,16 +41,28 @@ voz() {
   src=( $files[idx] )
   [[ -r $data/mine.psv ]] && src+=( $data/mine.psv )
   [[ -r $dir/learned ]] && src=( $dir/learned $src )
-  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned.
+  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned, and
+  # skip the phrase shown last (read from its file, however long) unless it's the only one, so two terminals
+  # in a row don't repeat it. Order: unlearned and not last, any unlearned, any not last, any.
   # Read $RANDOM here, not inside $( ): subshells all see the same value, so repeated voz calls would repeat.
-  local seed=$RANDOM
+  local seed=$RANDOM lastfile=
+  [[ -f $dir/last_phrase && -r $dir/last_phrase ]] && lastfile=$dir/last_phrase
   # Paths go through ENVIRON: awk -v would treat a backslash in them as an escape.
-  line=$(VOZ_LEARNED=$dir/learned awk -v seed=$seed '
+  line=$(VOZ_LEARNED=$dir/learned VOZ_LASTFILE=$lastfile awk -v seed=$seed '
+    BEGIN { if (ENVIRON["VOZ_LASTFILE"] == "" || (getline last < ENVIRON["VOZ_LASTFILE"]) <= 0) last = "" }
     FILENAME == ENVIRON["VOZ_LEARNED"] { done[$0]; next }
-    FNR > 1 && /\|/ { all[++n] = $0; if (!($0 in done)) todo[++m] = $0 }
-    END { srand(seed); if (m) print todo[int(rand() * m) + 1]; else if (n) print all[int(rand() * n) + 1] }' $src)
+    FNR > 1 && /\|/ {
+      all[++n] = $0; new = ($0 != last)
+      if (new) other[++o] = $0
+      if (!($0 in done)) { todo[++m] = $0; if (new) fresh[++k] = $0 }
+    }
+    END {
+      srand(seed)
+      if (k) print fresh[int(rand() * k) + 1]; else if (m) print todo[int(rand() * m) + 1]
+      else if (o) print other[int(rand() * o) + 1]; else if (n) print all[int(rand() * n) + 1]
+    }' $src)
   [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
-  mkdir -p $dir && print -r -- $line >| $dir/last_phrase
+  mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
 
   _vozlocal_int VOZLOCAL_DELAY 2
   trap 'printf "\r\e[K"; return 130' INT
