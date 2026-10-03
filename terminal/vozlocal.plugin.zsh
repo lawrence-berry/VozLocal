@@ -71,10 +71,13 @@ voz() {
 
   _vozlocal_int VOZLOCAL_DELAY 2
   trap 'printf "\r\e[K"; return 130' INT
-  print -r -- $'\e[1;36m'${line%%|*}$'\e[0m'
+  # Colours as in the README's demo: the phrase bold bright cyan, the countdown dim grey. NO_COLOR turns them off.
+  local hi= dim= off=
+  [[ -z $NO_COLOR ]] && hi=$'\e[1;38;5;81m' dim=$'\e[38;5;242m' off=$'\e[0m'
+  print -r -- $hi${line%%|*}$off
   local -i t
   for (( t = REPLY * 4; t > 0; t-- )); do
-    printf '\r\e[K  %s' ${(l:t::.:)}
+    printf '\r\e[K  %s' $dim${(l:t::.:)}$off
     sleep 0.25
   done
   print -r -- $'\r\e[K  → '${line#*|}

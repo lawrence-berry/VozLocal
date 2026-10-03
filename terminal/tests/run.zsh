@@ -31,6 +31,8 @@ run_tty() {
   fi
 }
 
+lit() { print -rn -- ${(b)1} }  # a check pattern that matches $1 exactly
+
 check() {  # check <name> <output> <pattern>
   if [[ $2 == $~3 ]]; then
     (( ++passed )); print -r -- "ok     $1"
@@ -63,12 +65,19 @@ check "works despite hostile user shell options" \
 check "countdown shows one dot per quarter second" \
   "$(run 'VOZLOCAL_DELAY=1 voz')" "*....*...*..*.*→ hello*"
 
+check "voz colours the phrase bold bright cyan and the countdown grey, as in the demo" \
+  "${$(run 'VOZLOCAL_DELAY=1; voz')//$'\e'/<E>}" \
+  "$(lit '<E>[1;38;5;81mhola<E>[0m')*$(lit '<E>[38;5;242m....<E>[0m')*$(lit '→ hello')"
+
+check "NO_COLOR turns the colours off" \
+  "$(run 'VOZLOCAL_DELAY=1; NO_COLOR=1; voz' | grep -c $'\e\\[[0-9;]*m')" "0"
+
 check "Ctrl-C mid-countdown clears the line and returns 130" \
   "$(run_tty "$SETUP; VOZLOCAL_DELAY=5; (sleep 1; kill -INT \$\$) & voz; print rc=\$?")" "*rc=130*"
 
 # Phrase lines (the bold first line of each voz) from n calls in a row, one per element.
 # voz runs directly, not in a pipeline: a subshell per call would give every call the same $RANDOM.
-voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;36m*} }
+voz_lines() { print -l ${(M)${(f)"$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat $1; repeat $2 voz")"}:#*\[1;38;5;81m*} }
 no_repeats() {  # no_repeats <lines…>: "<count> repeats=<consecutive equal pairs>"
   integer i r=0; for (( i = 2; i <= $#; i++ )); [[ ${(P)i} == ${(P)$((i - 1))} ]] && (( ++r )); print "$# repeats=$r"
 }
@@ -285,7 +294,6 @@ check "corrupt timestamp is ignored, not evaluated" \
 
 H=$TMP/host
 hex() { print -rn -- $1 | od -An -v -tx1 | tr -d ' \n' }
-lit() { print -rn -- ${(b)1} }  # a check pattern that matches $1 exactly
 # Frame a message the way Chrome does: its length in 4 bytes, then the message.
 frame() { local n=${#1}; printf "\\x$(( [##16] n & 255 ))\\x$(( [##16] n >> 8 & 255 ))\\x00\\x00%s" $1 }
 # Send one message to the host. Prints the reply without its 4-byte length.
