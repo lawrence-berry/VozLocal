@@ -63,7 +63,7 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
   - Marks made while Chrome can't reach the terminal are queued and replayed.
   - A new tab never waits more than 0.4 s for the terminal.
   - An optional cron job keeps phrases flowing when no terminal is open.
-- **No secrets in a public repo.** Tokens live in `~/.secrets` and Cloudflare, and examples use reserved, fictional numbers.
+- **No secrets in a public repo.** Tokens live outwith this repo and in Cloudflare, and examples use reserved, fictional numbers.
 
 ## Tests
 
