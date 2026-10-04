@@ -1,6 +1,6 @@
 # VozLocal WhatsApp bot
 
-Message a phrase to your own WhatsApp bot, reply `yes`, and `voz sync` brings it into your terminal rotation.
+Message a phrase to your own WhatsApp bot, reply `yes`, and `voz sync` brings it into VozLocal on terminal and Chrome.
 
 ```
 You:  Bondi = Bus
@@ -68,4 +68,4 @@ The short version, for when you've done it before:
 node --test bot/test
 ```
 
-No packages needed: the tests run the Worker against Node's built-in SQLite, loaded with the real migration.
+No packages needed, only Node 22.5 or newer: the tests run the Worker against Node's built-in SQLite, loaded with the real migration.

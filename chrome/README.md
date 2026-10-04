@@ -13,7 +13,7 @@ After pulling changes, click the reload arrow on the extension's card.
 
 ## Sharing with the terminal
 
-With the terminal plugin installed, run this once:
+With the [terminal plugin](../terminal/README.md) installed, run this once:
 
 ```sh
 voz install-chrome
@@ -53,7 +53,7 @@ It never shows the same phrase twice in a row. Learned phrases come back only wh
 | Path | What |
 |---|---|
 | `extension/` | The extension Chrome loads |
-| `extension/lib/voz.js` | Picking the day's category and phrase, and reading the bot's `/phrases` rows. No DOM, so it's tested in Node |
+| `extension/lib/voz.js` | Picking the day's category and phrase, cleaning stored settings, and reading the terminal host's replies. No DOM, so it's tested in Node |
 | `extension/newtab.*` | The page. Styles copy Google Translate's, with Google Sans bundled in `extension/fonts` (SIL Open Font License) |
 | `extension/data/phrases.json` | `terminal/data` bundled as JSON, made by `bin/build-data`. Don't edit it by hand |
 | `bin/build-data` | Rebuilds `phrases.json`. `--check` fails if it's out of date |
@@ -75,6 +75,7 @@ A spec fails if you forget. Your own phrases (`mine.psv`) aren't copied: the ext
 ## Tests
 
 ```sh
-cd chrome && node --test test        # logic
-chrome/bin/dev bundle exec rspec     # Ruby and browser specs, in Docker (the first build takes a few minutes)
+cd chrome
+node --test test             # logic
+bin/dev bundle exec rspec    # Ruby and browser specs, in Docker (the first build takes a few minutes)
 ```
