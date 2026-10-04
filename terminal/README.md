@@ -96,17 +96,3 @@ It's sourced into your interactive shell, so it's written to stay out of the way
 ```sh
 zsh terminal/tests/run.zsh
 ```
-
-88 checks in plain zsh, with nothing to install. They cover:
-- the reveal and colours;
-- learned phrases and no repeats;
-- syncing from the bot;
-- the Chrome host's protocol and its input checks;
-- both installers, with a stand-in crontab;
-- the daily rotation;
-- real pseudo-terminal shells;
-- Ctrl-C;
-- injection attempts through settings;
-- the format of every phrase file.
-
-It exits non-zero on any failure.
