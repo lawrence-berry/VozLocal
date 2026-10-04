@@ -1,6 +1,6 @@
 # VozLocal WhatsApp bot
 
-Message a phrase to your own WhatsApp bot, reply `yes`, and `voz sync` brings it into your [terminal](../terminal/README.md) rotation.
+Message a phrase to your own WhatsApp bot, reply `yes`, and `voz sync` brings it into VozLocal on terminal and Chrome.
 
 ```
 You:  Bondi = Bus
