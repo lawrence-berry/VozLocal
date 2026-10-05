@@ -26,7 +26,7 @@ Open a new terminal, and your first phrase is waiting.
 | *(open a terminal)* | Shows a phrase, at most once per `VOZLOCAL_INTERVAL` |
 | `voz` | Shows another phrase from today's category |
 | `yas` | Marks the last phrase as learned, so it stops coming up |
-| `voz sync` | Fetches phrases confirmed in the [WhatsApp bot](../bot/README.md). It also runs in the background when a terminal opens, and on macOS a notification shows what arrived |
+| `voz sync` | Fetches phrases confirmed in the [WhatsApp bot](../bot/README.md). It also runs in the background when a terminal opens. On macOS, background and cron syncs post a notification of what arrived; one you type prints it instead |
 | `voz install-chrome` | Lets the [Chrome extension](../chrome/README.md) share learned phrases and WhatsApp phrases with the terminal. Run it again if you move the repo |
 | `voz install-cron` | Runs `voz sync` every 2 minutes, so WhatsApp phrases reach Chrome with no terminal open. Output goes to `~/.cache/vozlocal/cron.log`. macOS may ask you to allow the change the first time |
 

@@ -183,8 +183,9 @@ _vozlocal_notify() {
     title="$#rows new phrases from WhatsApp" body=${(j:, :)names[1,3]}
     (( $#names > 3 )) && body+=', …'
   fi
+  # In the background, so a slow Notification Center never holds the sync lock.
   osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title "VozLocal" subtitle (item 1 of argv)' \
-    -e 'end run' $title $body >/dev/null 2>&1
+    -e 'end run' -- $title $body >/dev/null 2>&1 &!
   return 0
 }
 
