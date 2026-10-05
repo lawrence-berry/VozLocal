@@ -102,10 +102,14 @@ mkdir -p $TMP/data/multi && print "phrase|translation\na1|A\na2|A" > $TMP/data/m
   && print "phrase|translation\nb1|B\nb2|B" > $TMP/data/multi/b.psv \
   && print "phrase|translation\nc1|C\nc2|C" > $TMP/data/multi/c.psv
 cats=( a b c )
-today=$(zsh -fc "source ${(q)PLUGIN} >/dev/null; zmodload zsh/datetime; _vozlocal_category 3 \$(( EPOCHSECONDS / 86400 ))")
-learn_cat=$cats[today] next_cat=$cats[today%3+1]
-rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "${learn_cat}1|${(U)learn_cat}\n${learn_cat}2|${(U)learn_cat}" > $TMP/norepeat/vozlocal/learned
-lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=multi 20)"} ); next_lines=( ${(M)lines:#*${next_cat}[12]*} )
+todays_category() { zsh -fc "source ${(q)PLUGIN} >/dev/null; zmodload zsh/datetime; _vozlocal_category 3 \$(( EPOCHSECONDS / 86400 ))" }
+repeat 2; do  # once more if midnight UTC passed mid-test and changed today's category
+  today=$(todays_category)
+  learn_cat=$cats[today] next_cat=$cats[today%3+1]
+  rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "${learn_cat}1|${(U)learn_cat}\n${learn_cat}2|${(U)learn_cat}" > $TMP/norepeat/vozlocal/learned
+  lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=multi 20)"} ); next_lines=( ${(M)lines:#*${next_cat}[12]*} )
+  [[ $(todays_category) == $today ]] && break
+done
 check "voz moves to the next category once every phrase in today's is learned" "$#lines next=$#next_lines" "20 next=20"
 
 print "phrase|translation\nm1|M" > $TMP/data/multi/mine.psv
