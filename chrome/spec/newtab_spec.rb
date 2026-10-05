@@ -63,6 +63,40 @@ RSpec.describe 'The new tab page' do
     expect { text('lang-left') == 'English' }.to eventually_be_true
   end
 
+  it 'keeps Space for reveal and next after ✓ is clicked with the mouse' do
+    open_newtab(delay: 30)
+    marked = shown_row
+
+    page.click('#learned')
+    press('Space')
+    expect(text('right-text')).to eq(marked[1])
+    press('Space')
+
+    expect(shown_row).not_to eq(marked)
+    expect { storage['learned'] == [marked.join('|')] }.to eventually_be_true
+  end
+
+  it 'keeps Space for reveal and next after → is clicked with the mouse' do
+    open_newtab(delay: 30)
+
+    page.click('#next')
+    press('Space')
+
+    expect(text('right-text')).to eq(shown_row[1])
+    expect(storage['learned'] || []).to eq([])
+  end
+
+  it "shows unlearned phrases from other categories once today's are all learned, and names their category" do
+    open_newtab(delay: 30)
+    today = text('category')
+    category, rows = ExtensionHelpers::PHRASES['es_AR'].find { |name, _| name.tr('_', ' ').capitalize != today }
+    left = rows.first
+    open_newtab(delay: 30, learned: (all_rows - [left]).map { |row| row.join('|') })
+
+    expect(shown_row).to eq(left)
+    expect(text('category')).to eq(category.tr('_', ' ').capitalize)
+  end
+
   it 'lets Space press a button reached with the keyboard' do
     open_newtab(delay: 30)
     page.focus('#learned')

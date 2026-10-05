@@ -43,6 +43,14 @@ export function pick(rows, learned, last, rand = Math.random) {
   return pool ? pool[Math.floor(rand() * pool.length)] : null;
 }
 
+// Today's phrases first. When every one of them is learned, an unlearned phrase from anywhere in the region
+// (`everything`), so learned phrases come back only once the whole region is learned.
+export function pickPhrase(today, everything, learned, last, rand = Math.random) {
+  const unlearned = rows => rows.filter(r => !learned.has(key(r)));
+  const pool = unlearned(today).length ? today : unlearned(everything).length ? unlearned(everything) : today;
+  return pick(pool, learned, last, rand);
+}
+
 // Today's phrases for a region: its category for the day, plus the bot's phrases (which aren't a category).
 export function todaysRows(region, mine, day) {
   const names = Object.keys(region).sort();

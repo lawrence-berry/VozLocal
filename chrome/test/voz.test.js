@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, pickPhrase, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -171,3 +171,26 @@ test('withoutSent drops only the marks that were sent', () => {
   const now = [...sent, { key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }];
   assert.deepEqual(withoutSent(now, sent), [{ key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }]);
 });
+
+test("pickPhrase takes today's phrases while any is unlearned", () => {
+  const today = [['uno', 'one'], ['dos', 'two']];
+  const others = [['tres', 'three']];
+  assert.deepEqual(pool2(today, [...today, ...others], new Set([key(today[0])]), null), new Set(['dos']));
+});
+
+test("pickPhrase goes to the rest of the region when today's are all learned", () => {
+  const today = [['uno', 'one'], ['dos', 'two']];
+  const others = [['tres', 'three'], ['cuatro', 'four']];
+  const learned = new Set([...today, others[1]].map(key));
+  assert.deepEqual(pool2(today, [...today, ...others], learned, null), new Set(['tres']));
+});
+
+test('pickPhrase brings learned phrases back only when the whole region is learned', () => {
+  const today = [['uno', 'one'], ['dos', 'two']];
+  const all = [...today, ['tres', 'three']];
+  assert.deepEqual(pool2(today, all, new Set(all.map(key)), key(today[0])), new Set(['dos']));
+});
+
+function pool2(today, everything, learned, last) {
+  return new Set(Array.from({ length: 12 }, (_, i) => pickPhrase(today, everything, learned, last, () => i / 12)?.[0]));
+}
