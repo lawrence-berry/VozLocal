@@ -77,6 +77,8 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 ## Roadmap
 
 - ** Speach mode? **
+- **Animated GIFs** showing the Chrome new tab and the WhatsApp bot in action.
+- **Directory layouts as images:** show most of them as a picture of the tree rather than as text.
 
 <p align="center">
   <img src="assets/logo.svg" width="40" height="40" alt="" /><br />
