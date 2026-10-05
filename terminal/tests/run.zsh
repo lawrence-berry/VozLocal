@@ -53,7 +53,7 @@ check "missing region fails with a message" \
   "$(run 'VOZLOCAL_REGION=nope voz; print rc=$?')" $'vozlocal: no .psv files found\nrc=1'
 
 check "category with no phrases fails with a message" \
-  "$(run 'VOZLOCAL_REGION=empty voz; print rc=$?')" $'vozlocal: no phrases in none.psv\nrc=1'
+  "$(run 'VOZLOCAL_REGION=empty voz; print rc=$?')" $'vozlocal: no phrases in empty\nrc=1'
 
 check "invalid VOZLOCAL_DELAY is not evaluated" \
   "$(run 'VOZLOCAL_DELAY="path[\$(touch $VOZLOCAL_HOME/pwned)]" voz >/dev/null; print rc=$?; [[ -e $VOZLOCAL_HOME/pwned ]] && print PWNED')" \
@@ -93,8 +93,34 @@ check "voz avoids both learned phrases and the last one" \
   "$(no_repeats $lines) uno=${#${(M)lines:#*uno*}}" "30 repeats=0 uno=0"
 
 rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "uno|one\ndos|two" > $TMP/norepeat/vozlocal/learned
-check "voz avoids the last phrase even when every phrase is learned" \
-  "$(no_repeats ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"})" "30 repeats=0"
+check "voz says so when every phrase is learned, and shows none of them" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; VOZLOCAL_REGION=two; NO_COLOR=1; voz; print rc=\$?")" \
+  $'¡Bien ahí! You\'ve learned every phrase. Send new ones on WhatsApp to keep going.\nrc=0'
+
+# Three categories, so "the next one" can't pass by luck: learn today's, whichever it is, and expect the one after.
+mkdir -p $TMP/data/multi && print "phrase|translation\na1|A\na2|A" > $TMP/data/multi/a.psv \
+  && print "phrase|translation\nb1|B\nb2|B" > $TMP/data/multi/b.psv \
+  && print "phrase|translation\nc1|C\nc2|C" > $TMP/data/multi/c.psv
+cats=( a b c )
+todays_category() { zsh -fc "source ${(q)PLUGIN} >/dev/null; zmodload zsh/datetime; _vozlocal_category 3 \$(( EPOCHSECONDS / 86400 ))" }
+repeat 2; do  # once more if midnight UTC passed mid-test and changed today's category
+  today=$(todays_category)
+  learn_cat=$cats[today] next_cat=$cats[today%3+1]
+  rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "${learn_cat}1|${(U)learn_cat}\n${learn_cat}2|${(U)learn_cat}" > $TMP/norepeat/vozlocal/learned
+  lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=multi 20)"} ); next_lines=( ${(M)lines:#*${next_cat}[12]*} )
+  [[ $(todays_category) == $today ]] && break
+done
+check "voz moves to the next category once every phrase in today's is learned" "$#lines next=$#next_lines" "20 next=20"
+
+print "phrase|translation\nm1|M" > $TMP/data/multi/mine.psv
+rm -rf $TMP/norepeat; mkdir -p $TMP/norepeat/vozlocal && print "a1|A\na2|A\nb1|B\nb2|B\nc1|C\nc2|C" > $TMP/norepeat/vozlocal/learned
+check "with every category learned, voz shows only unlearned mine.psv phrases" \
+  "$(voz_lines VOZLOCAL_REGION=multi 5)" $'*m1*\n*m1*\n*m1*\n*m1*\n*m1*'
+print "a1|A\na2|A\nb1|B\nb2|B\nc1|C\nc2|C\nm1|M" > $TMP/norepeat/vozlocal/learned
+print -r -- 'm1|M' > $TMP/norepeat/vozlocal/last_phrase
+check "...and says so once those are learned too, leaving the last phrase as it was" \
+  "$(run "XDG_CACHE_HOME=${(q)TMP}/norepeat; VOZLOCAL_REGION=multi; voz"; cat $TMP/norepeat/vozlocal/last_phrase)" "*learned every phrase*$(lit 'm1|M')"
+rm -rf $TMP/data/multi
 
 print "phrase|translation\nsiete|seven" > $TMP/data/two/mine.psv; rm -rf $TMP/norepeat
 lines=( ${(f)"$(voz_lines VOZLOCAL_REGION=two 30)"} )
@@ -162,8 +188,8 @@ check "yas twice records the phrase once" \
 check "voz skips learned phrases" \
   "$(run "$C; rm -rf \$XDG_CACHE_HOME; VOZLOCAL_REGION=two; voz >/dev/null; yas >/dev/null; l=\$(<\$XDG_CACHE_HOME/vozlocal/learned); [[ \$(repeat 20 voz) == *\${l%%|*}* ]] && print SHOWN || print OK")" "OK"
 
-check "voz falls back to learned phrases when all are learned" \
-  "$(run "$C; rm -rf \$XDG_CACHE_HOME; voz >/dev/null; yas >/dev/null; voz; print rc=\$?")" "*→ hello*rc=0"
+check "voz never shows a phrase once yas has marked it" \
+  "$(run "$C; rm -rf \$XDG_CACHE_HOME; voz >/dev/null; yas >/dev/null; voz; print rc=\$?")" "*learned every phrase*rc=0"
 
 # --- voz sync ---
 

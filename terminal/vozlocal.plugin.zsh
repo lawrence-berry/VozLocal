@@ -42,38 +42,52 @@ voz() {
   local dir=${XDG_CACHE_HOME:-$HOME/.cache}/vozlocal idx line
   local -a src
   idx=$(_vozlocal_category $#files $(( EPOCHSECONDS / 86400 )))
-  src=( $files[idx] )
+  # Today's category first, then the others in order, wrapping round: the first one with an unlearned phrase is
+  # used, so once every phrase in today's is learned, the next category takes over. Chrome follows the same rule,
+  # though each picks its own category for the day.
+  src=( $files[idx,-1] $files[1,idx-1] )
   [[ -r $data/mine.psv ]] && src+=( $data/mine.psv )
   [[ -f $dir/learned && -r $dir/learned ]] && src=( $dir/learned $src )
-  # Skip learned phrases (whole lines in $dir/learned), unless every phrase in the category is learned, and
-  # skip the phrase shown last (read from its file, however long) unless it's the only one, so two terminals
-  # in a row don't repeat it. Order: unlearned and not last, any unlearned, any not last, any.
+  # Never a learned phrase (whole lines in $dir/learned). mine.psv's unlearned phrases join the category used,
+  # and are all that's left once every category is learned. Skip the phrase shown last (read from its file,
+  # however long) unless it's the only one, so two terminals in a row don't repeat it.
   # Read $RANDOM here, not inside $( ): subshells all see the same value, so repeated voz calls would repeat.
   local seed=$RANDOM lastfile=
   [[ -f $dir/last_phrase && -r $dir/last_phrase ]] && lastfile=$dir/last_phrase
   # Paths go through ENVIRON: awk -v would treat a backslash in them as an escape.
-  line=$(VOZ_LEARNED=$dir/learned VOZ_LASTFILE=$lastfile awk -v seed=$seed '
+  line=$(VOZ_LEARNED=$dir/learned VOZ_MINE=$data/mine.psv VOZ_LASTFILE=$lastfile awk -v seed=$seed '
     BEGIN { if (ENVIRON["VOZ_LASTFILE"] == "" || (getline last < ENVIRON["VOZ_LASTFILE"]) <= 0) last = "" }
     FILENAME == ENVIRON["VOZ_LEARNED"] { done[$0]; next }
+    FNR == 1 && FILENAME != ENVIRON["VOZ_MINE"] { order[++files] = FILENAME }
     FNR > 1 && /\|/ {
-      all[++n] = $0; new = ($0 != last)
-      if (new) other[++o] = $0
-      if (!($0 in done)) { todo[++m] = $0; if (new) fresh[++k] = $0 }
+      phrases++
+      if ($0 in done) next
+      if (FILENAME == ENVIRON["VOZ_MINE"]) mine[++m] = $0
+      else row[FILENAME, ++count[FILENAME]] = $0
     }
     END {
+      for (f = 1; f <= files && !use; f++) if (count[order[f]]) use = order[f]
+      for (i = 1; i <= count[use]; i++) pool[++n] = row[use, i]
+      for (i = 1; i <= m; i++) pool[++n] = mine[i]
+      if (!n) { if (phrases) print "ALL LEARNED"; exit }
+      for (i = 1; i <= n; i++) if (pool[i] != last) fresh[++k] = pool[i]
       srand(seed)
-      if (k) print fresh[int(rand() * k) + 1]; else if (m) print todo[int(rand() * m) + 1]
-      else if (o) print other[int(rand() * o) + 1]; else if (n) print all[int(rand() * n) + 1]
+      if (k) print fresh[int(rand() * k) + 1]; else print pool[int(rand() * n) + 1]
     }' $src)
-  [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
+  # Colours as in the README's demo: the phrase bold bright cyan, the countdown dim grey. NO_COLOR turns them off.
+  local hi= dim= off=
+  [[ -z $NO_COLOR ]] && hi=$'\e[1;38;5;81m' dim=$'\e[38;5;242m' off=$'\e[0m'
+  # A phrase line always holds a |, so this can't be one.
+  if [[ $line == 'ALL LEARNED' ]]; then
+    print -r -- "$dim¡Bien ahí! You've learned every phrase. Send new ones on WhatsApp to keep going.$off"
+    return 0
+  fi
+  [[ -n $line ]] || { print -u2 "vozlocal: no phrases in ${data:t}"; return 1 }
   # Only write a regular file: opening a FIFO for writing blocks until something reads it.
   [[ -f $dir/last_phrase || ! -e $dir/last_phrase ]] && mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
 
   _vozlocal_int VOZLOCAL_DELAY 2
   trap 'printf "\e[0m\r\e[K"; return 130' INT
-  # Colours as in the README's demo: the phrase bold bright cyan, the countdown dim grey. NO_COLOR turns them off.
-  local hi= dim= off=
-  [[ -z $NO_COLOR ]] && hi=$'\e[1;38;5;81m' dim=$'\e[38;5;242m' off=$'\e[0m'
   print -r -- $hi${line%%|*}$off
   local -i t
   for (( t = REPLY * 4; t > 0; t-- )); do
