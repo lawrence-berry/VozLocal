@@ -47,8 +47,9 @@ export function pick(rows, learned, last, rand = Math.random) {
 // phrase from anywhere in the region (`everything`), so learned phrases come back, and the last one repeats,
 // only once nothing else is left.
 export function pickPhrase(today, everything, learned, last, rand = Math.random) {
-  const fresh = rows => rows.filter(r => !learned.has(key(r)) && key(r) !== last);
-  const pool = fresh(today).length ? today : fresh(everything).length ? fresh(everything) : today;
+  const unlearned = rows => rows.filter(r => !learned.has(key(r)));
+  const fresh = rows => unlearned(rows).filter(r => key(r) !== last);
+  const pool = fresh(today).length ? today : [fresh(everything), unlearned(everything)].find(p => p.length) ?? today;
   return pick(pool, learned, last, rand);
 }
 

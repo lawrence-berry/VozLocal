@@ -192,6 +192,12 @@ test("pickPhrase doesn't repeat today's last unlearned phrase while the region h
   assert.deepEqual(pool2(today, [...today, ...others], learned, key(today[2])), new Set(['tres', 'cuatro']));
 });
 
+test('pickPhrase repeats the last phrase rather than show a learned one, when it is the only unlearned phrase', () => {
+  const today = [['uno', 'one'], ['dos', 'two']];
+  const all = [...today, ['tres', 'three']];
+  assert.deepEqual(pool2(today, all, new Set(today.map(key)), key(all[2])), new Set(['tres']));
+});
+
 test('pickPhrase brings learned phrases back only when the whole region is learned', () => {
   const today = [['uno', 'one'], ['dos', 'two']];
   const all = [...today, ['tres', 'three']];
