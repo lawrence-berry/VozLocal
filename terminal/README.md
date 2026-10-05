@@ -32,7 +32,7 @@ Open a new terminal, and your first phrase is waiting.
 
 Both `install-` commands take `--remove` to undo them.
 
-Each day features one category, and every category comes up once before any repeats. The order is reshuffled each cycle. `voz` never shows a learned phrase. Once every phrase in today's category is learned, it moves to the next category that still has unlearned ones, as the Chrome extension does, and it says so once everything is learned. It doesn't repeat the last phrase while anything else is left.
+Each day features one category, and every category comes up once before any repeats. The order is reshuffled each cycle. `voz` never shows a learned phrase. Once every phrase in today's category is learned, it moves to the next category, in name order, that still has unlearned ones. That's the same rule as the Chrome extension, though each picks its own category for the day. It says so once everything is learned. It doesn't repeat the last phrase while anything else is left.
 
 ## Settings
 

@@ -43,7 +43,8 @@ voz() {
   local -a src
   idx=$(_vozlocal_category $#files $(( EPOCHSECONDS / 86400 )))
   # Today's category first, then the others in order, wrapping round: the first one with an unlearned phrase is
-  # used, so once every phrase in today's is learned, the next category takes over. Chrome does the same.
+  # used, so once every phrase in today's is learned, the next category takes over. Chrome follows the same rule,
+  # though each picks its own category for the day.
   src=( $files[idx,-1] $files[1,idx-1] )
   [[ -r $data/mine.psv ]] && src+=( $data/mine.psv )
   [[ -f $dir/learned && -r $dir/learned ]] && src=( $dir/learned $src )
@@ -81,7 +82,7 @@ voz() {
     print -r -- "$dim¡Bien ahí! You've learned every phrase. Send new ones on WhatsApp to keep going.$off"
     return 0
   fi
-  [[ -n $line ]] || { print -u2 "vozlocal: no phrases in $files[idx]:t"; return 1 }
+  [[ -n $line ]] || { print -u2 "vozlocal: no phrases in ${data:t}"; return 1 }
   # Only write a regular file: opening a FIFO for writing blocks until something reads it.
   [[ -f $dir/last_phrase || ! -e $dir/last_phrase ]] && mkdir -p $dir && { print -r -- $line >| $dir/last_phrase } 2>/dev/null
 
