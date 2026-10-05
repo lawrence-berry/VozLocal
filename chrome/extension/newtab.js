@@ -131,6 +131,7 @@ function show(row) {
   $('dots').textContent = '';
   $('right-text').textContent = '';
   if (!row) {
+    $('category').textContent = 'No phrases';
     $('left-text').textContent = 'No phrases to show yet.';
     $('target').classList.add('revealed');
     $('target').removeAttribute('title');

@@ -95,6 +95,7 @@ RSpec.describe 'The new tab page' do
 
     expect(shown_row).to eq(left)
     expect(text('category')).to eq(category.tr('_', ' ').capitalize)
+    expect(text('category')).not_to eq(today)
   end
 
   it 'lets Space press a button reached with the keyboard' do

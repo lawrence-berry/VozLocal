@@ -43,11 +43,12 @@ export function pick(rows, learned, last, rand = Math.random) {
   return pool ? pool[Math.floor(rand() * pool.length)] : null;
 }
 
-// Today's phrases first. When every one of them is learned, an unlearned phrase from anywhere in the region
-// (`everything`), so learned phrases come back only once the whole region is learned.
+// Today's phrases first. When none of them is both unlearned and different from the last one shown, an unlearned
+// phrase from anywhere in the region (`everything`), so learned phrases come back, and the last one repeats,
+// only once nothing else is left.
 export function pickPhrase(today, everything, learned, last, rand = Math.random) {
-  const unlearned = rows => rows.filter(r => !learned.has(key(r)));
-  const pool = unlearned(today).length ? today : unlearned(everything).length ? unlearned(everything) : today;
+  const fresh = rows => rows.filter(r => !learned.has(key(r)) && key(r) !== last);
+  const pool = fresh(today).length ? today : fresh(everything).length ? fresh(everything) : today;
   return pick(pool, learned, last, rand);
 }
 
