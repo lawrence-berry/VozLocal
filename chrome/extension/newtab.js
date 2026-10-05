@@ -1,5 +1,5 @@
 // The new tab: a phrase on the left, its meaning on the right after a countdown, like voz in the terminal.
-import { cleanSettings, dayNumber, key, pick, queueMark, readHostReply, todaysRows, toHex, withoutSent } from './lib/voz.js';
+import { cleanSettings, dayNumber, key, pick, queueMark, readHostReply, todaysChoice, toHex, withoutSent } from './lib/voz.js';
 
 const $ = id => document.getElementById(id);
 const LANGS = { 'es-AR': 'Español (Rioplatense)', en: 'English' };
@@ -8,7 +8,10 @@ const HOST = 'com.vozlocal.host';
 const HOST_WAIT_MS = 2000;  // per message to the host; it gives up on the learned lock sooner, after 1 s
 const FIRST_WAIT_MS = 400;  // how long the page waits for the terminal before showing what it already has
 
-let rows = [];
+let region = {};
+let categoryOf = new Map();
+let tabbing = false;   // focus was last moved with Tab, so Space on a button should press it
+let markedHere = null; // the phrase on screen, once this tab's own ✓ has touched it: it stays up so it can be undone
 let learned = new Set();
 let current = null;
 let revealed = false;
@@ -76,14 +79,15 @@ function showLink({ ok, error }) {
   }
 }
 
-// Today's rows: the day's category plus mine.psv, with learned marks as they stand.
+// The region's phrases and their categories, with learned marks as they stand.
 function build() {
   learned = new Set(settings.learned);
-  const region = phrases[settings.region] ?? phrases.es_AR ?? Object.values(phrases)[0] ?? {};
-  const today = todaysRows(region, settings.mine, dayNumber());
-  rows = today.rows;
-  $('category').textContent = today.category ? title(today.category) : 'Your phrases';
+  region = phrases[settings.region] ?? phrases.es_AR ?? Object.values(phrases)[0] ?? {};
+  categoryOf = new Map(Object.entries(region).flatMap(([name, list]) => list.map(r => [key(r), title(name)])));
 }
+
+// Never a learned phrase, and worked out afresh each time, so a phrase just marked ✓ can't come up next.
+const choose = last => pick(todaysChoice(region, settings.mine, learned, dayNumber()).rows, learned, last);
 
 async function start() {
   try {
@@ -101,13 +105,12 @@ async function start() {
     // A ✓ pressed before the sync is done waits for it, so the sync can't write older marks over it.
     saving = syncing.then(() => {}, () => {});
     wire();
-    show(pick(rows, learned, settings.last));
+    show(choose(settings.last));
     if (first) {
       showLink(first);
     } else {
       syncing.then(result => {
-        build();
-        updateLearned();
+        refresh();
         showLink(result);
       }).catch(error => console.warn('VozLocal could not apply the terminal\'s answer:', error));
     }
@@ -117,20 +120,33 @@ async function start() {
   }
 }
 
+// After learned marks or mine.psv change outside this tab's own ✓ (the terminal's answer, yas, another tab):
+// move on if the phrase on screen is now learned, or if new phrases ended the "all learned" page.
+function refresh() {
+  build();
+  if (!current || (learned.has(key(current)) && key(current) !== markedHere)) show(choose(current && key(current)));
+  else updateLearned();
+}
+
 function show(row) {
   clearInterval(timer);
   current = row;
+  markedHere = null;
   revealed = false;
   document.body.classList.toggle('empty', !row);
   $('dots').textContent = '';
   $('right-text').textContent = '';
   if (!row) {
-    $('left-text').textContent = 'No phrases to show yet.';
+    const done = Object.keys(region).length > 0;
+    $('category').textContent = done ? 'All learned' : 'No phrases';
+    $('left-text').textContent = done ? '¡Bien ahí! You\'ve learned every phrase. Send new ones on WhatsApp to keep going.' : 'No phrases to show yet.';
     $('target').classList.add('revealed');
     $('target').removeAttribute('title');
     return;
   }
   chrome.storage.local.set({ last: key(row) });
+  // The category it came from, which isn't today's when today's are all learned.
+  $('category').textContent = categoryOf.get(key(row)) ?? 'Your phrases';
   $('target').classList.remove('revealed');
   $('target').title = 'Click to reveal (Space)';
   layout();
@@ -169,7 +185,7 @@ function reveal() {
 }
 
 function next() {
-  if (rows.length) show(pick(rows, learned, current && key(current)));
+  show(choose(current && key(current)));
 }
 
 // Save the mark to the terminal's learned file through the host, one change at a time. If the host can't be
@@ -180,6 +196,7 @@ function toggleLearned() {
   const k = key(current);
   const on = !learned.has(k);
   on ? learned.add(k) : learned.delete(k);
+  markedHere = k; // on or off: an echo of an earlier ✓ mustn't take the phrase away mid-undo
   updateLearned();
   saving = saving.then(async () => {
     try {
@@ -214,8 +231,7 @@ function follow(changes, area) {
   if (changes.learned || changes.mine) {
     const fresh = cleanSettings({ learned: changes.learned?.newValue ?? settings.learned, mine: changes.mine?.newValue ?? settings.mine });
     settings = { ...settings, learned: fresh.learned, mine: fresh.mine };
-    build();
-    updateLearned();
+    refresh();
   }
   if (changes.swapped) {
     settings = { ...settings, swapped: changes.swapped.newValue === true };
@@ -226,13 +242,17 @@ function follow(changes, area) {
 function wire() {
   chrome.storage.onChanged.addListener(follow);
   $('target').addEventListener('click', e => { if (!e.target.closest('button')) reveal(); });
-  $('next').addEventListener('click', next);
-  $('learned').addEventListener('click', toggleLearned);
-  $('swap').addEventListener('click', swap);
+  // A button clicked with the mouse lets go of focus, or the next Space would press it again.
+  const button = (id, action) => $(id).addEventListener('click', e => { if (e.detail) e.currentTarget.blur(); action(); });
+  button('next', next);
+  button('learned', toggleLearned);
+  button('swap', swap);
+  document.addEventListener('keydown', e => { if (e.key === 'Tab') tabbing = true; }, true);
+  document.addEventListener('pointerdown', () => { tabbing = false; }, true);
   document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea')) return;
-    // Space on a button reached with the keyboard presses that button, as usual.
-    if (e.key === ' ' && e.target.matches('button:focus-visible')) return;
+    // Space presses a button only if it was reached with Tab; otherwise it reveals, then moves on.
+    if (e.key === ' ' && tabbing && e.target.closest('button')) return;
     const action = {
       ' ': () => (revealed ? next() : reveal()),
       n: next,

@@ -96,6 +96,21 @@ RSpec.describe 'Sharing with the terminal' do
     expect(storage['pending'].map { |p| p['key'] }).to eq([shown_row.join('|')])
   end
 
+  it 'keeps the phrase up through a quick ✓ and undo while the terminal is slow to save', :terminal do
+    open_newtab(delay: 30)
+    slow_host(0.6) # the first ✓ is still being saved when the undo comes
+    shown = shown_row
+
+    press('l')
+    press('l')
+
+    # First the ✓'s save lands, then the undo's.
+    expect { learned_lines == [shown.join('|')] }.to eventually_be_true
+    expect { storage['learned'] == [] && learned_lines.empty? }.to eventually_be_true
+    expect(shown_row).to eq(shown)
+    expect(page.get_attribute('#learned', 'aria-pressed')).to eq('false')
+  end
+
   it 'works without the terminal, and hands marks over once it is linked' do
     open_newtab(delay: 30)
     expect(text('link')).to eq('Not shared with the terminal: run voz install-chrome')

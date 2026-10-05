@@ -43,12 +43,19 @@ export function pick(rows, learned, last, rand = Math.random) {
   return pool ? pool[Math.floor(rand() * pool.length)] : null;
 }
 
-// Today's phrases for a region: its category for the day, plus the bot's phrases (which aren't a category).
-export function todaysRows(region, mine, day) {
+// What to choose from now, never a learned phrase: the day's category, or once all of its phrases are learned,
+// the next category (in name order, wrapping round) that still has unlearned ones. mine.psv's unlearned phrases
+// join whichever it is. category is null when only mine's are left, and rows is empty when everything is learned.
+export function todaysChoice(region, mine, learned, day) {
+  const unlearned = rows => rows.filter(r => !learned.has(key(r)));
   const names = Object.keys(region).sort();
-  if (!names.length) return { category: null, rows: mine };
-  const category = names[categoryIndex(names.length, day)];
-  return { category, rows: [...region[category], ...mine] };
+  const start = names.length ? categoryIndex(names.length, day) : 0;
+  for (let i = 0; i < names.length; i++) {
+    const name = names[(start + i) % names.length];
+    const rows = unlearned(region[name]);
+    if (rows.length) return { category: name, rows: [...rows, ...unlearned(mine)] };
+  }
+  return { category: null, rows: unlearned(mine) };
 }
 
 const DEFAULTS = { region: 'es_AR', delay: 2, learned: [], last: null, mine: [], swapped: false, pending: [], linked: false };

@@ -41,12 +41,12 @@ Each new tab picks a phrase from today's category. The meaning appears after a 2
 
 | Key | Button | Does |
 |---|---|---|
-| Space | click the right panel | Reveal now; once revealed, the next phrase |
+| Space | click the right panel | Reveal now; once revealed, the next phrase. After you Tab to a button, Space presses that button instead |
 | N | → | Next phrase |
 | L | ✓ | Mark as learned, so it isn't picked again; press again to undo |
 | S | ⇄ | Swap the languages, so the English comes first |
 
-It never shows the same phrase twice in a row. Learned phrases come back only when a category has nothing else left.
+It never shows a learned phrase. Once every phrase in today's category is learned, it moves to the next category that still has unlearned ones, and the chip shows which. Your WhatsApp phrases join whichever category is showing. It doesn't repeat the last phrase while anything else is left, and once everything is learned it says so.
 
 ## Layout
 
