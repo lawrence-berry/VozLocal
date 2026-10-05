@@ -10,7 +10,8 @@ const FIRST_WAIT_MS = 400;  // how long the page waits for the terminal before s
 
 let region = {};
 let categoryOf = new Map();
-let tabbing = false;  // focus was last moved with Tab, so Space on a button should press it
+let tabbing = false;
+let markedHere = null; // the phrase on screen, if this tab's own ✓ marked it: it stays up so it can be undone  // focus was last moved with Tab, so Space on a button should press it
 let learned = new Set();
 let current = null;
 let revealed = false;
@@ -109,8 +110,7 @@ async function start() {
       showLink(first);
     } else {
       syncing.then(result => {
-        build();
-        updateLearned();
+        refresh();
         showLink(result);
       }).catch(error => console.warn('VozLocal could not apply the terminal\'s answer:', error));
     }
@@ -120,9 +120,18 @@ async function start() {
   }
 }
 
+// After learned marks or mine.psv change outside this tab's own ✓ (the terminal's answer, yas, another tab):
+// move on if the phrase on screen is now learned, or if new phrases ended the "all learned" page.
+function refresh() {
+  build();
+  if (!current || (learned.has(key(current)) && key(current) !== markedHere)) show(choose(current && key(current)));
+  else updateLearned();
+}
+
 function show(row) {
   clearInterval(timer);
   current = row;
+  markedHere = null;
   revealed = false;
   document.body.classList.toggle('empty', !row);
   $('dots').textContent = '';
@@ -187,6 +196,7 @@ function toggleLearned() {
   const k = key(current);
   const on = !learned.has(k);
   on ? learned.add(k) : learned.delete(k);
+  markedHere = on ? k : null;
   updateLearned();
   saving = saving.then(async () => {
     try {
@@ -221,8 +231,7 @@ function follow(changes, area) {
   if (changes.learned || changes.mine) {
     const fresh = cleanSettings({ learned: changes.learned?.newValue ?? settings.learned, mine: changes.mine?.newValue ?? settings.mine });
     settings = { ...settings, learned: fresh.learned, mine: fresh.mine };
-    build();
-    updateLearned();
+    refresh();
   }
   if (changes.swapped) {
     settings = { ...settings, swapped: changes.swapped.newValue === true };

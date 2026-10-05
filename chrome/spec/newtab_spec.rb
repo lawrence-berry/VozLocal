@@ -111,7 +111,31 @@ RSpec.describe 'The new tab page' do
     expect(seen.map(&:first)).to all(satisfy { |row| !learned.include?(row.join('|')) })
     expect(seen.map(&:last).uniq.size).to eq(1)
     expect(seen.first.first).not_to be_nil
-    expect(today).not_to include(seen.first.first)
+    expect(seen.map(&:first) & today).to eq([])
+  end
+
+  it 'moves on when the phrase on screen is learned elsewhere, but not after its own ✓' do
+    open_newtab(delay: 30)
+    mine = shown_row
+    press('l')
+    sleep 0.3
+    expect(shown_row).to eq(mine) # its own ✓ stays up, so it can be undone
+
+    press('n')
+    other = shown_row
+    page.evaluate('k => chrome.storage.local.set({ learned: [k] })', arg: other.join('|')) # as yas or another tab would
+
+    expect { shown_row && shown_row != other }.to eventually_be_true
+  end
+
+  it 'leaves the all-learned page when new phrases arrive' do
+    open_newtab(delay: 30, learned: all_rows.map { |row| row.join('|') })
+    page.wait_for_selector('body.empty')
+
+    page.evaluate("() => chrome.storage.local.set({ mine: [['Zarpado', 'Outrageous']] })") # a sync from the terminal
+
+    expect { text('left-text') == 'Zarpado' }.to eventually_be_true
+    expect(text('category')).to eq('Your phrases')
   end
 
   it 'says so when every phrase is learned, rather than show a learned one' do

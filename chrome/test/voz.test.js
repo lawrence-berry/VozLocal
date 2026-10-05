@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows , todaysChoice } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysChoice } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
