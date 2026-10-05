@@ -10,8 +10,8 @@ const FIRST_WAIT_MS = 400;  // how long the page waits for the terminal before s
 
 let region = {};
 let categoryOf = new Map();
-let tabbing = false;
-let markedHere = null; // the phrase on screen, if this tab's own ✓ marked it: it stays up so it can be undone  // focus was last moved with Tab, so Space on a button should press it
+let tabbing = false;   // focus was last moved with Tab, so Space on a button should press it
+let markedHere = null; // the phrase on screen, once this tab's own ✓ has touched it: it stays up so it can be undone
 let learned = new Set();
 let current = null;
 let revealed = false;
@@ -196,7 +196,7 @@ function toggleLearned() {
   const k = key(current);
   const on = !learned.has(k);
   on ? learned.add(k) : learned.delete(k);
-  markedHere = on ? k : null;
+  markedHere = k; // on or off: an echo of an earlier ✓ mustn't take the phrase away mid-undo
   updateLearned();
   saving = saving.then(async () => {
     try {

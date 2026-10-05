@@ -118,7 +118,7 @@ RSpec.describe 'The new tab page' do
     open_newtab(delay: 30)
     mine = shown_row
     press('l')
-    sleep 0.3
+    expect { storage['learned'] == [mine.join('|')] }.to eventually_be_true
     expect(shown_row).to eq(mine) # its own ✓ stays up, so it can be undone
 
     press('n')
