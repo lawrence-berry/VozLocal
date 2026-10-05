@@ -1,5 +1,5 @@
 // The new tab: a phrase on the left, its meaning on the right after a countdown, like voz in the terminal.
-import { cleanSettings, dayNumber, key, pickPhrase, queueMark, readHostReply, todaysRows, toHex, withoutSent } from './lib/voz.js';
+import { cleanSettings, dayNumber, key, pick, queueMark, readHostReply, todaysChoice, toHex, withoutSent } from './lib/voz.js';
 
 const $ = id => document.getElementById(id);
 const LANGS = { 'es-AR': 'Español (Rioplatense)', en: 'English' };
@@ -8,8 +8,7 @@ const HOST = 'com.vozlocal.host';
 const HOST_WAIT_MS = 2000;  // per message to the host; it gives up on the learned lock sooner, after 1 s
 const FIRST_WAIT_MS = 400;  // how long the page waits for the terminal before showing what it already has
 
-let rows = [];       // today's: the day's category and mine.psv
-let everything = []; // every phrase in the region, for when today's are all learned
+let region = {};
 let categoryOf = new Map();
 let tabbing = false;  // focus was last moved with Tab, so Space on a button should press it
 let learned = new Set();
@@ -79,17 +78,15 @@ function showLink({ ok, error }) {
   }
 }
 
-// Today's rows: the day's category plus mine.psv, with learned marks as they stand.
+// The region's phrases and their categories, with learned marks as they stand.
 function build() {
   learned = new Set(settings.learned);
-  const region = phrases[settings.region] ?? phrases.es_AR ?? Object.values(phrases)[0] ?? {};
-  const today = todaysRows(region, settings.mine, dayNumber());
-  rows = today.rows;
-  everything = [...Object.values(region).flat(), ...settings.mine];
+  region = phrases[settings.region] ?? phrases.es_AR ?? Object.values(phrases)[0] ?? {};
   categoryOf = new Map(Object.entries(region).flatMap(([name, list]) => list.map(r => [key(r), title(name)])));
 }
 
-const choose = last => pickPhrase(rows, everything, learned, last);
+// Never a learned phrase, and worked out afresh each time, so a phrase just marked ✓ can't come up next.
+const choose = last => pick(todaysChoice(region, settings.mine, learned, dayNumber()).rows, learned, last);
 
 async function start() {
   try {
@@ -131,8 +128,9 @@ function show(row) {
   $('dots').textContent = '';
   $('right-text').textContent = '';
   if (!row) {
-    $('category').textContent = 'No phrases';
-    $('left-text').textContent = 'No phrases to show yet.';
+    const done = Object.keys(region).length > 0;
+    $('category').textContent = done ? 'All learned' : 'No phrases';
+    $('left-text').textContent = done ? '¡Bien ahí! You\'ve learned every phrase. Send new ones on WhatsApp to keep going.' : 'No phrases to show yet.';
     $('target').classList.add('revealed');
     $('target').removeAttribute('title');
     return;
@@ -178,7 +176,7 @@ function reveal() {
 }
 
 function next() {
-  if (everything.length) show(choose(current && key(current)));
+  show(choose(current && key(current)));
 }
 
 // Save the mark to the terminal's learned file through the host, one change at a time. If the host can't be

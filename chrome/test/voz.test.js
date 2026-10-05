@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, pickPhrase, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysRows } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows , todaysChoice } from '../extension/lib/voz.js';
 
 const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
@@ -53,15 +53,6 @@ test('pick can return any phrase when nothing is learned or shown', () => {
 test('knownPhrases covers every category in the region and the synced phrases', () => {
   const region = { a: [['a1', 'A']], b: [['b1', 'B'], ['b2', 'B']] };
   assert.deepEqual(knownPhrases(region, [['m1', 'M']]), new Set(['a1', 'b1', 'b2', 'm1']));
-});
-
-test("todaysRows is the day's category plus the bot's phrases", () => {
-  const region = { b: [['b1', 'B']], a: [['a1', 'A']] };
-  const mine = [['m1', 'M']];
-  const days = [0, 1].map(day => todaysRows(region, mine, day));
-  assert.deepEqual(days.map(d => d.category).sort(), ['a', 'b']);
-  for (const d of days) assert.deepEqual(d.rows, [...region[d.category], ...mine]);
-  assert.deepEqual(todaysRows({}, mine, 0), { category: null, rows: mine });
 });
 
 test('readSyncRows keeps well-formed new rows and tracks the highest id', () => {
@@ -172,38 +163,36 @@ test('withoutSent drops only the marks that were sent', () => {
   assert.deepEqual(withoutSent(now, sent), [{ key: 'c|d', on: true, at: 2 }, { key: 'a|b', on: false, at: 3 }]);
 });
 
-test("pickPhrase takes today's phrases while any is unlearned", () => {
-  const today = [['uno', 'one'], ['dos', 'two']];
-  const others = [['tres', 'three']];
-  assert.deepEqual(pool2(today, [...today, ...others], new Set([key(today[0])]), null), new Set(['dos']));
+const region = { a: [['a1', 'A'], ['a2', 'A']], b: [['b1', 'B']], c: [['c1', 'C'], ['c2', 'C']] };
+const mineRows = [['m1', 'M']];
+const keys = rows => new Set(rows.map(key));
+// The day whose category is `name`.
+const dayOf = name => Array.from({ length: 3 }, (_, d) => d).find(d => ['a', 'b', 'c'][categoryIndex(3, d)] === name);
+
+test("todaysChoice is the day's category plus mine.psv, while it has unlearned phrases", () => {
+  const day = dayOf('a');
+  assert.deepEqual(todaysChoice(region, mineRows, new Set([key(region.a[0])]), day),
+    { category: 'a', rows: [region.a[1], mineRows[0]] });
 });
 
-test("pickPhrase goes to the rest of the region when today's are all learned", () => {
-  const today = [['uno', 'one'], ['dos', 'two']];
-  const others = [['tres', 'three'], ['cuatro', 'four']];
-  const learned = new Set([...today, others[1]].map(key));
-  assert.deepEqual(pool2(today, [...today, ...others], learned, null), new Set(['tres']));
+test('todaysChoice moves to the next category with unlearned phrases once the day\'s are all learned', () => {
+  const day = dayOf('a');
+  assert.deepEqual(todaysChoice(region, mineRows, keys(region.a), day).category, 'b');
+  assert.deepEqual(todaysChoice(region, mineRows, keys([...region.a, ...region.b]), day).category, 'c');
+  const fromC = todaysChoice(region, [], keys([...region.c, region.a[0]]), dayOf('c'));
+  assert.deepEqual(fromC, { category: 'a', rows: [region.a[1]] });  // wraps round to the start
 });
 
-test("pickPhrase doesn't repeat today's last unlearned phrase while the region has others", () => {
-  const today = [['uno', 'one'], ['dos', 'two'], ['mio', 'mine']];
-  const others = [['tres', 'three'], ['cuatro', 'four']];
-  const learned = new Set([key(today[0]), key(today[1])]);
-  assert.deepEqual(pool2(today, [...today, ...others], learned, key(today[2])), new Set(['tres', 'cuatro']));
+test('todaysChoice never offers a learned phrase', () => {
+  const learned = keys([region.a[0], region.b[0], mineRows[0]]);
+  for (const day of [0, 1, 2]) {
+    for (const row of todaysChoice(region, mineRows, learned, day).rows) assert.ok(!learned.has(key(row)), row[0]);
+  }
 });
 
-test('pickPhrase repeats the last phrase rather than show a learned one, when it is the only unlearned phrase', () => {
-  const today = [['uno', 'one'], ['dos', 'two']];
-  const all = [...today, ['tres', 'three']];
-  assert.deepEqual(pool2(today, all, new Set(today.map(key)), key(all[2])), new Set(['tres']));
+test('todaysChoice offers only mine.psv once every category is learned, then nothing', () => {
+  const allRegion = keys(Object.values(region).flat());
+  assert.deepEqual(todaysChoice(region, mineRows, allRegion, 0), { category: null, rows: mineRows });
+  assert.deepEqual(todaysChoice(region, mineRows, new Set([...allRegion, key(mineRows[0])]), 0), { category: null, rows: [] });
+  assert.deepEqual(todaysChoice({}, [], new Set(), 0), { category: null, rows: [] });
 });
-
-test('pickPhrase brings learned phrases back only when the whole region is learned', () => {
-  const today = [['uno', 'one'], ['dos', 'two']];
-  const all = [...today, ['tres', 'three']];
-  assert.deepEqual(pool2(today, all, new Set(all.map(key)), key(today[0])), new Set(['dos']));
-});
-
-function pool2(today, everything, learned, last) {
-  return new Set(Array.from({ length: 12 }, (_, i) => pickPhrase(today, everything, learned, last, () => i / 12)?.[0]));
-}

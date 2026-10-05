@@ -46,7 +46,7 @@ Each new tab picks a phrase from today's category. The meaning appears after a 2
 | L | ✓ | Mark as learned, so it isn't picked again; press again to undo |
 | S | ⇄ | Swap the languages, so the English comes first |
 
-Your WhatsApp phrases join today's category. When nothing unlearned is left there, it picks unlearned phrases from the other categories, and the chip shows which one. It doesn't repeat the last phrase while anything else is unlearned, and learned phrases come back only once the whole region is learned.
+It never shows a learned phrase. Once every phrase in today's category is learned, it moves to the next category that still has unlearned ones, and the chip shows which. Your WhatsApp phrases join whichever category is showing. It doesn't repeat the last phrase while anything else is left, and once everything is learned it says so.
 
 ## Layout
 

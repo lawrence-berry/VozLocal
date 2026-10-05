@@ -98,6 +98,31 @@ RSpec.describe 'The new tab page' do
     expect(text('category')).not_to eq(today)
   end
 
+  it "switches to one other category as soon as today's last phrase is marked learned, and never shows a learned one" do
+    open_newtab(delay: 30)
+    today = ExtensionHelpers::PHRASES['es_AR'].find { |name, _| name.tr('_', ' ').capitalize == text('category') }.last
+    open_newtab(delay: 30, learned: today.drop(1).map { |row| row.join('|') })
+    expect(shown_row).to eq(today.first)
+
+    press('l')
+    seen = 8.times.map { press('n'); [shown_row, text('category')] }
+
+    learned = storage['learned']
+    expect(seen.map(&:first)).to all(satisfy { |row| !learned.include?(row.join('|')) })
+    expect(seen.map(&:last).uniq.size).to eq(1)
+    expect(seen.first.first).not_to be_nil
+    expect(today).not_to include(seen.first.first)
+  end
+
+  it 'says so when every phrase is learned, rather than show a learned one' do
+    open_newtab(delay: 30, learned: all_rows.map { |row| row.join('|') })
+    page.wait_for_selector('body.empty')
+
+    expect(text('category')).to eq('All learned')
+    expect(text('left-text')).to start_with('¡Bien ahí!')
+    expect(shown_row).to be_nil
+  end
+
   it 'lets Space press a button reached with the keyboard' do
     open_newtab(delay: 30)
     page.focus('#learned')
