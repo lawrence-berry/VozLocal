@@ -26,7 +26,7 @@ Open a new terminal, and your first phrase is waiting.
 | *(open a terminal)* | Shows a phrase, at most once per `VOZLOCAL_INTERVAL` |
 | `voz` | Shows another phrase from today's category |
 | `yas` | Marks the last phrase as learned, so it stops coming up |
-| `voz sync` | Fetches phrases confirmed in the [WhatsApp bot](../bot/README.md). It also runs in the background when a terminal opens |
+| `voz sync` | Fetches phrases confirmed in the [WhatsApp bot](../bot/README.md). It also runs in the background when a terminal opens. On macOS, background and cron syncs post a notification of what arrived; one you type prints it instead |
 | `voz install-chrome` | Lets the [Chrome extension](../chrome/README.md) share learned phrases and WhatsApp phrases with the terminal. Run it again if you move the repo |
 | `voz install-cron` | Runs `voz sync` every 2 minutes, so WhatsApp phrases reach Chrome with no terminal open. Output goes to `~/.cache/vozlocal/cron.log`. macOS may ask you to allow the change the first time |
 
@@ -46,6 +46,7 @@ All of these are optional. Set them in `~/.zshrc` **before** the `source` line:
 | `VOZLOCAL_BOT_URL` | *(unset)* | Your WhatsApp bot's address. Leave it unset to stay fully offline |
 | `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`. Keep it in `~/.secrets/vozlocal.zsh`, not `~/.zshrc` ([SETUP.md section 13](../bot/SETUP.md#13-point-the-terminal-at-the-bot)) |
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
+| `VOZLOCAL_NOTIFY` | `1` | `0` turns off the macOS notification for new phrases |
 | `NO_COLOR` | *(unset)* | Set it to anything to turn off colour ([no-color.org](https://no-color.org)) |
 
 For example, for a longer pause and a phrase in every new shell:
@@ -88,6 +89,7 @@ It's sourced into your interactive shell, so it's written to stay out of the way
   - The token reaches `curl` on stdin, not the command line.
   - Rows with control characters, bidi or zero-width marks, or invalid UTF-8 are dropped.
   - A failed sync leaves `mine.psv` as it was.
+  - New phrases from a background or cron sync post a macOS notification. The phrase reaches `osascript` as an argument, never as part of the script, so it can't run anything. macOS lists these notifications under Script Editor, so allow notifications for Script Editor in System Settings if none appear.
 - **It shares state with Chrome.** `vozlocal-host` is a Chrome native messaging host written in zsh. It reads and writes the learned file under a lock that `yas` shares. It only touches regular files, so a FIFO can't hang it.
 - **State** lives in `$XDG_CACHE_HOME/vozlocal/` (by default `~/.cache/vozlocal/`). Delete `learned` there to start over.
 

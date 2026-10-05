@@ -40,7 +40,7 @@ flowchart LR
   Chrome["Chrome new tab"] <-- "native messaging" --> Files
 ```
 
-The terminal's files are the single source of truth. Mark a phrase as learned in either place and it stops appearing in both. Phrases from WhatsApp sync when a terminal opens. With the optional cron job (`voz install-cron`), they arrive within two minutes even with no terminal open.
+The terminal's files are the single source of truth. Mark a phrase as learned in either place and it stops appearing in both. Phrases from WhatsApp sync when a terminal opens, with a macOS notification when new ones arrive. With the optional cron job (`voz install-cron`), they arrive within two minutes even with no terminal open.
 
 ## Quick start
 

@@ -3,7 +3,7 @@
 emulate -L zsh
 setopt extended_glob
 
-unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN NO_COLOR  # user settings must not leak into the tests
+unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VOZLOCAL_BOT_URL VOZLOCAL_BOT_TOKEN VOZLOCAL_NOTIFY NO_COLOR  # user settings must not leak into the tests
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
@@ -171,7 +171,16 @@ check "voz falls back to learned phrases when all are learned" \
 S="curl() { cat >| \$VOZLOCAL_HOME/curl.stdin; print -r -- \"\$@\" >> \$VOZLOCAL_HOME/curl.args; [[ -r \$VOZLOCAL_HOME/reply ]] || return 22; cat \$VOZLOCAL_HOME/reply }"
 S="$S; XDG_CACHE_HOME=${(q)TMP}/sync VOZLOCAL_BOT_URL=https://bot.test/ VOZLOCAL_BOT_TOKEN=tok-123"
 MINE=$TMP/data/test/mine.psv
-reset_sync() { rm -rf $TMP/sync $MINE $TMP/curl.*(N) $TMP/reply }
+reset_sync() { rm -rf $TMP/sync $MINE $TMP/curl.*(N) $TMP/reply $TMP/osascript.args }
+# osascript stand-in, so tests never post real notifications: records each argument on its own line.
+N="osascript() { print -rl -- \"\$@\" >> \$VOZLOCAL_HOME/osascript.args }"
+S="$S; $N"
+# The title and body of the notification posted, waiting for it since osascript runs in the background.
+notified() {
+  repeat 30 { [[ -s $TMP/osascript.args ]] && break; sleep 0.1 }
+  grep -v '^-e$' $TMP/osascript.args 2>/dev/null | sed -n '5,6p'
+}
+not_notified() { sleep 0.5; [[ -e $TMP/osascript.args ]] && print NOTIFIED || print none }
 
 reset_sync
 check "voz sync without settings fails with a message" \
@@ -210,6 +219,30 @@ reset_sync; print "1|Bondi|Bus" > $TMP/reply
 check "voz sync works with mv, rm, mkdir and cat aliased" \
   "$(zsh -fc "alias mv='mv -i' rm='rm -i' mkdir='mkdir -v' cat='cat -n'; $SETUP; $S; voz sync; print '2|Che|Hey' >| \$VOZLOCAL_HOME/reply; voz sync </dev/null" 2>&1; command cat $MINE)" \
   $'voz sync: 1 new phrase\nvoz sync: 1 new phrase\nphrase?translation\nBondi?Bus\nChe?Hey'
+
+reset_sync; print "1|Bondi|Bus" > $TMP/reply
+check "a sync with no terminal watching posts a notification of the new phrase" \
+  "$(run "$S; voz sync" >/dev/null; notified)" "$(lit $'New phrase from WhatsApp\nBondi → Bus')"
+
+reset_sync; print "1|Bondi|Bus\n2|Che|Hey\n3|Fiaca|Laziness\n4|Guita|Money" > $TMP/reply
+check "several new phrases are named in one notification, at most three" \
+  "$(run "$S; voz sync" >/dev/null; notified)" "$(lit $'4 new phrases from WhatsApp\nBondi, Che, Fiaca, …')"
+
+reset_sync; print -n > $TMP/reply
+check "no notification when nothing is new" "$(run "$S; voz sync" >/dev/null; not_notified)" "none"
+
+reset_sync; print "1|Bondi|Bus" > $TMP/reply
+check "VOZLOCAL_NOTIFY=0 turns notifications off" \
+  "$(run "$S; VOZLOCAL_NOTIFY=0; voz sync" >/dev/null; not_notified)" "none"
+
+reset_sync; print "1|Bondi|Bus" > $TMP/reply
+check "a voz sync typed in a terminal prints, and doesn't notify" \
+  "$(run_tty "$SETUP; $S; voz sync" | tr -d '\r'; not_notified)" "*voz sync: 1 new phrase*none"
+
+reset_sync; print '1|-e do shell script "touch '$TMP'/pwned"|"quoted" \\ back' > $TMP/reply
+check "a phrase reaches osascript as text, not script" \
+  "$(run "$S; voz sync" >/dev/null; notified | sed -n 2p; ls $TMP/pwned 2>&1)" \
+  "$(lit '-e do shell script "touch '$TMP'/pwned" → "quoted" \ back')*No such file*"
 
 # Nothing may run while aliases are off: a Ctrl-C there would leave them off for the whole session.
 lines=( ${(f)"$(<$PLUGIN)"} )
@@ -254,6 +287,7 @@ cp $PLUGIN $TMP/auto.plugin.zsh
 auto="$S; VOZLOCAL_REGION=test VOZLOCAL_DELAY=0; source ${(q)TMP}/auto.plugin.zsh; repeat 30 { [[ -e ${(q)TMP}/curl.args ]] && break; sleep 0.1 }; sleep 0.3"
 reset_sync; print "1|Bondi|Bus" > $TMP/reply
 check "opening a terminal syncs in the background" "$(run_tty $auto; cat $MINE)" "*Bondi?Bus*"
+check "...and posts a notification of the new phrase" "$(notified)" "$(lit $'New phrase from WhatsApp\nBondi → Bus')"
 rm -f $TMP/curl.args
 check "a second terminal within VOZLOCAL_SYNC_INTERVAL doesn't sync again" \
   "$(run_tty $auto; [[ -e $TMP/curl.args ]] && print SYNCED)" "*~*SYNCED*"
