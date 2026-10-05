@@ -167,6 +167,27 @@ _vozlocal_install_cron() {
   [[ $1 == --remove ]] && print "voz: stopped syncing from cron" || print "voz: syncing with the bot every 2 minutes"
 }
 
+# A macOS notification for new phrases that arrived with no terminal watching: the background sync when a shell
+# opens, and the cron job. A voz sync you type prints its result instead. VOZLOCAL_NOTIFY=0 turns it off.
+# The text reaches osascript as arguments, never as part of the script, so a phrase can't run anything.
+_vozlocal_notify() {
+  emulate -L zsh
+  [[ -t 1 || $VOZLOCAL_NOTIFY == 0 ]] && return 0
+  whence osascript >/dev/null || return 0
+  local -a rows=( ${(f)"$(<$1)"} ) names
+  local title body
+  if (( $#rows == 1 )); then
+    title='New phrase from WhatsApp' body="${rows[1]%%|*} → ${rows[1]#*|}"
+  else
+    names=( ${rows%%|*} )
+    title="$#rows new phrases from WhatsApp" body=${(j:, :)names[1,3]}
+    (( $#names > 3 )) && body+=', …'
+  fi
+  osascript -e 'on run argv' -e 'display notification (item 2 of argv) with title "VozLocal" subtitle (item 1 of argv)' \
+    -e 'end run' $title $body >/dev/null 2>&1
+  return 0
+}
+
 # voz sync: append phrases confirmed in the WhatsApp bot since the last sync to mine.psv. See bot/README.md.
 _vozlocal_sync() {
   emulate -L zsh
@@ -213,6 +234,7 @@ _vozlocal_sync() {
       { [[ -r $mine ]] && cat $mine || print phrase\|translation; cat $fresh } >| $tmp && mv -f $tmp $mine || return 1
     fi
     (( r[1] > since )) && print $r[1] >| $dir/sync_last_id
+    (( r[2] )) && _vozlocal_notify $fresh
     (( r[2] )) && print "voz sync: $r[2] new phrase$([[ $r[2] == 1 ]] || print s)" || print "voz sync: up to date"
   } always {
     rm -f $fetched $fresh $tmp
