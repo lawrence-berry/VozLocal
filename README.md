@@ -13,6 +13,7 @@
   <img src="https://img.shields.io/badge/zsh-5.0%2B-F15A24?style=for-the-badge&logo=zsh&logoColor=white" alt="zsh 5.0 or newer" />
   <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome extension, Manifest V3" />
   <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
+  <a href="https://github.com/lawrence-berry/VozLocal/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/lawrence-berry/VozLocal/test.yml?branch=main&style=for-the-badge&label=tests" alt="Tests" /></a>
   <img src="https://img.shields.io/badge/Espa%C3%B1ol-Rioplatense-74ACDF?style=for-the-badge" alt="Rioplatense Spanish" />
 </p>
 
@@ -70,6 +71,8 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 ## Tests
 
+All four run on every push and pull request, in GitHub Actions, and the terminal suite runs on both macOS and Linux.
+
 | Part | Command | Checks |
 |---|---|---|
 | Terminal | `zsh terminal/tests/run.zsh` | 98, in plain zsh, including real pseudo-terminal shells |
@@ -79,7 +82,11 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 ## Roadmap
 
-- ** Speach mode? **
+- **Speech mode?**
+
+## Licence
+
+[MIT](LICENSE).
 
 <p align="center">
   <img src="assets/logo.svg" width="40" height="40" alt="" /><br />
