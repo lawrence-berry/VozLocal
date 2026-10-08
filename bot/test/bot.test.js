@@ -1,4 +1,4 @@
-// Run: node --test bot/test   (Node 22.5+, no packages needed)
+// Run: cd bot && node --test   (Node 22.13+, no packages needed)
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

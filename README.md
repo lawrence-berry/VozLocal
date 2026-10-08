@@ -76,8 +76,8 @@ All four run on every push and pull request, in GitHub Actions, and the terminal
 | Part | Command | Checks |
 |---|---|---|
 | Terminal | `zsh terminal/tests/run.zsh` | 98, in plain zsh, including real pseudo-terminal shells |
-| Bot | `node --test bot/test` | 19, against Node's built-in SQLite with the real migration (Node 22.5 or newer) |
-| Chrome logic | `cd chrome && node --test test` | 19, on picking phrases and reading the terminal's replies |
+| Bot | `cd bot && node --test` | 19, against Node's built-in SQLite with the real migration (Node 22.13 or newer) |
+| Chrome logic | `cd chrome && node --test` | 19, on picking phrases and reading the terminal's replies |
 | Chrome in the browser | `chrome/bin/dev bundle exec rspec` | 40 RSpec specs, most of them Playwright specs that load the real extension and its native host in Chromium, in Docker |
 
 ## Roadmap
