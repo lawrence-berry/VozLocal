@@ -24,8 +24,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - run: node --test bot/test/*.test.js
-      - run: node --test test/*.test.js
+      - run: node --test
+        working-directory: bot
+      - run: node --test
         working-directory: chrome
 
   browser:
