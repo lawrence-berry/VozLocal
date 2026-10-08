@@ -71,7 +71,7 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 ## Tests
 
-All four run on every push and pull request, in GitHub Actions, with the terminal's on both macOS and Linux.
+All four run on every push and pull request, in GitHub Actions, and the terminal suite runs on both macOS and Linux.
 
 | Part | Command | Checks |
 |---|---|---|
@@ -84,7 +84,9 @@ All four run on every push and pull request, in GitHub Actions, with the termina
 
 - **Speech mode?**
 
-Released under the [MIT License](LICENSE).
+## Licence
+
+[MIT](LICENSE).
 
 <p align="center">
   <img src="assets/logo.svg" width="40" height="40" alt="" /><br />

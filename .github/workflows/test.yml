@@ -12,7 +12,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y zsh
       - run: zsh terminal/tests/run.zsh
@@ -20,8 +20,8 @@ jobs:
   node:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
       - run: node --test bot/test/*.test.js
@@ -31,5 +31,5 @@ jobs:
   browser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: chrome/bin/dev bundle exec rspec
