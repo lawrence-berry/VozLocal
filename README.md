@@ -59,17 +59,12 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 ## Engineering highlights
 
-- **Safe inside your shell.** The plugin runs inside your own shell, so your options and aliases can't change its behaviour. Every setting is checked as a plain number, so a bad value can't run code, and Ctrl-C is handled cleanly.
-- **Untrusted input handled carefully.**
-  - The bot verifies Meta's HMAC signature over the raw request bytes.
-  - It answers only allowed numbers, and handles each message once despite webhook retries.
-  - The bot refuses phrases with hidden or control characters, and the terminal and Chrome drop any that get through.
 - **A browser talking to local files.** Chrome extensions can't read files, so a small zsh program speaks Chrome's native messaging protocol. It shares a file lock with the terminal.
+- **Careful with untrusted input.** The plugin runs inside your shell, so your options and aliases can't change it, and settings are checked as plain numbers so a bad value can't run code. The bot verifies Meta's HMAC signature over the raw request bytes, answers only allowed numbers, handles each message once despite retries, and refuses phrases with hidden or control characters.
 - **Resilient sync.**
   - Marks made while Chrome can't reach the terminal are queued and replayed.
   - A new tab never waits more than 0.4 s for the terminal.
   - An optional cron job keeps phrases flowing when no terminal is open.
-- **No secrets in a public repo.** Tokens live outwith this repo and in Cloudflare, and examples use reserved, fictional numbers.
 
 ## Tests
 
