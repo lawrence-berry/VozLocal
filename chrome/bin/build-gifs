@@ -50,16 +50,18 @@ def chrome_gif(playwright)
     page = context.pages.first || context.new_page
     page.goto(ExtensionHelpers::NEWTAB)
     page.wait_for_selector('#left-text:not(:empty)')
-    frames = []
+    shots = [] # [png, when taken]; each frame lasts until the next screenshot
     keys = { 3.5 => 'l', 4.7 => 'n', 8.2 => 's' } # seconds in => key
-    start = last = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    while last - start < 10.7
-      png = page.screenshot
-      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      add_frame(frames, png, now - last)
-      last = now
-      keys.each { |at, key| page.keyboard.press(keys.delete(at)) if now - start >= at }
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    while (now = Process.clock_gettime(Process::CLOCK_MONOTONIC)) - start < 10.7
+      shots << [page.screenshot, now]
+      keys.select { |at, _| now - start >= at }.each do |at, key|
+        page.keyboard.press(key)
+        keys.delete(at)
+      end
     end
+    frames = []
+    shots.each_cons(2) { |(png, at), (_, after)| add_frame(frames, png, after - at) }
     context.close
     write_gif(frames, CHROME_GIF, 800)
   end
@@ -67,12 +69,12 @@ end
 
 # The phone mockup, frame by frame: render(t) draws the moment t seconds in.
 def whatsapp_gif(playwright)
-  fps = 10
+  fps = 12.5 # ffmpeg's concat reader times frames in steps of 1/25 s, so each frame must be a whole number of them
   frames = []
   playwright.chromium.launch(channel: 'chromium', headless: true) do |browser|
     page = browser.new_page(viewport: { width: 320, height: 660 }, deviceScaleFactor: 2)
     page.goto("file://#{File.join(__dir__, 'whatsapp-demo.html')}")
-    (0...(11 * fps)).each do |i|
+    (0...(11 * fps).to_i).each do |i|
       page.evaluate('t => render(t)', arg: i.to_f / fps)
       add_frame(frames, page.screenshot(omitBackground: true), 1.0 / fps)
     end
