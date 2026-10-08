@@ -44,7 +44,7 @@ def chrome_gif(playwright)
     Object.new.extend(ExtensionHelpers).tap { |h| h.instance_variable_set(:@profile, profile) }.link_terminal
     context = playwright.chromium.launch_persistent_context(
       profile,
-      channel: 'chromium', headless: true, viewport: { width: 1000, height: 440 }, colorScheme: 'light',
+      channel: 'chromium', headless: true, viewport: { width: 1000, height: 440 }, colorScheme: 'dark',
       args: ["--disable-extensions-except=#{EXTENSION}", "--load-extension=#{EXTENSION}"],
     )
     page = context.pages.first || context.new_page

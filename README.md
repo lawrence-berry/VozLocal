@@ -33,9 +33,11 @@ It ships with 37 phrases in five categories (greetings, *voseo*, expressions, *l
 | [**WhatsApp bot**](bot/README.md) | Text `Bondi = Bus` to your bot, reply `yes`, and the phrase joins your rotation | Cloudflare Worker, D1, WhatsApp Cloud API |
 
 <p align="center">
-  <img src="assets/chrome-demo.gif" width="560" alt="The Chrome new tab: a Spanish phrase, a countdown, then its English meaning; it's marked learned, the next phrase follows, and the languages are swapped" />
-  &nbsp;
-  <img src="assets/whatsapp-demo.gif" width="200" alt="A WhatsApp chat on a phone: 'Bondi = Bus' is sent, the bot asks to confirm, 'yes' is sent, and the bot replies 'Saved: Bondi → Bus'" />
+  <img src="assets/chrome-demo.gif" width="720" alt="The Chrome new tab: a Spanish phrase, a countdown, then its English meaning; it's marked learned, the next phrase follows, and the languages are swapped" />
+</p>
+
+<p align="center">
+  <img src="assets/whatsapp-demo.gif" width="260" alt="A WhatsApp chat on a phone: 'Bondi = Bus' is sent, the bot asks to confirm, 'yes' is sent, and the bot replies 'Saved: Bondi → Bus'" />
 </p>
 
 ```mermaid
@@ -78,7 +80,6 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 ## Roadmap
 
 - ** Speach mode? **
-- **Directory layouts as images:** show most of them as a picture of the tree rather than as text.
 
 <p align="center">
   <img src="assets/logo.svg" width="40" height="40" alt="" /><br />
