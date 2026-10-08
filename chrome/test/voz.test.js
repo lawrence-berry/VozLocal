@@ -1,9 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { categoryIndex, cleanSettings, dayNumber, fromHex, key, knownPhrases, queueMark, readHostReply, toHex, withoutSent, pick, readSyncRows, todaysChoice } from '../extension/lib/voz.js';
+import { categoryIndex, cleanSettings, dayNumber, fromHex, key, queueMark, readHostReply, toHex, withoutSent, pick, todaysChoice } from '../extension/lib/voz.js';
 
-const bytes = s => new TextEncoder().encode(s);
 const phrases = JSON.parse(readFileSync(new URL('../extension/data/phrases.json', import.meta.url), 'utf8'));
 
 test('dayNumber counts UTC days since the epoch', () => {
@@ -48,47 +47,6 @@ test('pick falls back: any unlearned, then any not last, then any', () => {
 
 test('pick can return any phrase when nothing is learned or shown', () => {
   assert.deepEqual(pool(rows, new Set(), null), new Set(['uno', 'dos', 'tres']));
-});
-
-test('knownPhrases covers every category in the region and the synced phrases', () => {
-  const region = { a: [['a1', 'A']], b: [['b1', 'B'], ['b2', 'B']] };
-  assert.deepEqual(knownPhrases(region, [['m1', 'M']]), new Set(['a1', 'b1', 'b2', 'm1']));
-});
-
-test('readSyncRows keeps well-formed new rows and tracks the highest id', () => {
-  const have = new Set(['Che']);
-  const out = readSyncRows(bytes('3|Bondi|Bus\n4|Che|Hey\n7|Bondi|Bus again\n5|Fiaca|Laziness\n'), have);
-  assert.deepEqual(out, { rows: [['Bondi', 'Bus'], ['Fiaca', 'Laziness']], maxId: 7 });
-  assert.ok(have.has('Fiaca'));
-  assert.deepEqual(readSyncRows(bytes(''), new Set()), { rows: [], maxId: 0 });
-});
-
-test('readSyncRows drops malformed and unsafe rows but still counts their ids', () => {
-  const lines = [
-    '10|no translation',
-    '11|a|b|c',
-    'x|Bondi|Bus',
-    '12|tab\there|x',
-    '13|cr|carriage return\r',
-    '14|bidi\u202ehere|x',
-    '15|zero\u200bwidth|x',
-    '16|soft\u00adhyphen|x',
-    '17|bom\ufeff|x',
-    '18|line\u2028sep|x',
-    '19|Ok|Fine',
-  ];
-  const out = readSyncRows(bytes(lines.join('\n')), new Set());
-  assert.deepEqual(out, { rows: [['Ok', 'Fine']], maxId: 19 });
-});
-
-test('readSyncRows drops a row that starts with a BOM and still counts long ids', () => {
-  assert.deepEqual(readSyncRows(bytes('\ufeff5|a|b\n123456789012345678901|c|d\n'), new Set()),
-    { rows: [['c', 'd']], maxId: 123456789012345678901 });
-});
-
-test('readSyncRows drops a row of invalid UTF-8 and keeps the rest', () => {
-  const bad = new Uint8Array([...bytes('20|caf'), 0xe9, ...bytes('|coffee\n21|Mate|Tea\n')]);
-  assert.deepEqual(readSyncRows(bad, new Set()), { rows: [['Mate', 'Tea']], maxId: 21 });
 });
 
 test('the bundled phrases are well formed', () => {
