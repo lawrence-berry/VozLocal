@@ -2,6 +2,8 @@
 
 A new tab page that shows a Rioplatense Spanish phrase, then its translation, like `voz` in the terminal. It's laid out like Google Translate, and it shares learned phrases and your WhatsApp phrases with the terminal.
 
+<p align="center"><img src="../assets/chrome-demo.gif" width="720" alt="The new tab: a Spanish phrase, a countdown, then its English meaning; it's marked learned, the next phrase follows, and the languages are swapped" /></p>
+
 ## Install
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
@@ -57,8 +59,9 @@ It never shows a learned phrase. Once every phrase in today's category is learne
 | `extension/newtab.*` | The page. Styles copy Google Translate's, with Google Sans bundled in `extension/fonts` (SIL Open Font License) |
 | `extension/data/phrases.json` | `terminal/data` bundled as JSON, made by `bin/build-data`. Don't edit it by hand |
 | `bin/build-data` | Rebuilds `phrases.json`. `--check` fails if it's out of date |
+| `bin/build-gifs` | Records the README's GIFs: the real new tab, and the WhatsApp chat drawn on a phone by `bin/whatsapp-demo.html` |
 | `bin/build-icons` | Renders `assets/logo.svg` as the extension's icons, in Chromium |
-| `bin/dev` | Runs a command in the Docker image (Ruby 3.4, Node and Playwright's Chromium), so nothing uses the system Ruby |
+| `bin/dev` | Runs a command in the Docker image (Ruby 3.4, Node, ffmpeg and Playwright's Chromium), so nothing uses the system Ruby |
 | `test/` | Node tests for `voz.js` |
 | `spec/` | RSpec specs, including Playwright specs that load the extension in Chromium |
 

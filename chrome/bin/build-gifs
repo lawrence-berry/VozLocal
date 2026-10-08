@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Make the README's animated GIFs from screenshots in Playwright's Chromium, encoded with ffmpeg (run through bin/dev).
+#
+#   bin/build-gifs   write assets/chrome-demo.gif and assets/whatsapp-demo.gif
+
+require 'playwright'
+require 'tmpdir'
+require_relative '../spec/support/extension'
+
+ROOT = File.expand_path('../..', __dir__)
+CHROME_GIF = File.join(ROOT, 'assets', 'chrome-demo.gif')
+WHATSAPP_GIF = File.join(ROOT, 'assets', 'whatsapp-demo.gif')
+EXTENSION = ExtensionHelpers::EXTENSION
+
+# Screenshots as [png, seconds]. A frame identical to the last one lengthens it instead, which keeps the GIF small.
+def add_frame(frames, png, seconds)
+  return frames.last[1] += seconds if frames.last&.first == png
+
+  frames << [png, seconds]
+end
+
+# Encode the frames at `width` pixels wide. Transparent pixels stay transparent, so the phone's corners sit on any
+# README background.
+def write_gif(frames, path, width)
+  Dir.mktmpdir do |dir|
+    list = File.join(dir, 'frames.txt')
+    File.write(list, frames.each_with_index.map { |(png, seconds), i|
+      File.binwrite(File.join(dir, "#{i}.png"), png)
+      "file '#{i}.png'\nduration #{seconds.round(2)}\n"
+    }.join + "file '#{frames.size - 1}.png'\n") # the concat demuxer ignores the last duration unless the file repeats
+    system('ffmpeg', '-loglevel', 'error', '-y', '-f', 'concat', '-i', list, '-vf',
+           "scale=#{width}:-1:flags=lanczos,split[a][b];[a]palettegen=reserve_transparent=1:stats_mode=diff[p];" \
+           '[b][p]paletteuse=alpha_threshold=128', '-fps_mode', 'vfr', path, exception: true)
+  end
+  puts "wrote #{path.delete_prefix("#{ROOT}/")} (#{File.size(path) / 1024} KB)"
+end
+
+# The real new tab, in real time: a phrase counts down and is revealed, marked learned, the next one, then a swap.
+def chrome_gif(playwright)
+  Dir.mktmpdir do |profile|
+    # Link a throwaway terminal, as the specs do, so the footer doesn't say "Not shared with the terminal".
+    Object.new.extend(ExtensionHelpers).tap { |h| h.instance_variable_set(:@profile, profile) }.link_terminal
+    context = playwright.chromium.launch_persistent_context(
+      profile,
+      channel: 'chromium', headless: true, viewport: { width: 1000, height: 440 }, colorScheme: 'light',
+      args: ["--disable-extensions-except=#{EXTENSION}", "--load-extension=#{EXTENSION}"],
+    )
+    page = context.pages.first || context.new_page
+    page.goto(ExtensionHelpers::NEWTAB)
+    page.wait_for_selector('#left-text:not(:empty)')
+    frames = []
+    keys = { 3.5 => 'l', 4.7 => 'n', 8.2 => 's' } # seconds in => key
+    start = last = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    while last - start < 10.7
+      png = page.screenshot
+      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      add_frame(frames, png, now - last)
+      last = now
+      keys.each { |at, key| page.keyboard.press(keys.delete(at)) if now - start >= at }
+    end
+    context.close
+    write_gif(frames, CHROME_GIF, 800)
+  end
+end
+
+# The phone mockup, frame by frame: render(t) draws the moment t seconds in.
+def whatsapp_gif(playwright)
+  fps = 10
+  frames = []
+  playwright.chromium.launch(channel: 'chromium', headless: true) do |browser|
+    page = browser.new_page(viewport: { width: 320, height: 660 }, deviceScaleFactor: 2)
+    page.goto("file://#{File.join(__dir__, 'whatsapp-demo.html')}")
+    (0...(11 * fps)).each do |i|
+      page.evaluate('t => render(t)', arg: i.to_f / fps)
+      add_frame(frames, page.screenshot(omitBackground: true), 1.0 / fps)
+    end
+  end
+  write_gif(frames, WHATSAPP_GIF, 480)
+end
+
+Playwright.create(playwright_cli_executable_path: 'playwright') do |playwright|
+  chrome_gif(playwright)
+  whatsapp_gif(playwright)
+end

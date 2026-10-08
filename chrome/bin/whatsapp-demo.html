@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- A phone showing a chat with the bot, for bin/build-gifs. render(t) draws the moment t seconds in, so frames are
+     deterministic. The replies are the bot's own wording, from bot/src/index.js. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { font: 14px/19px -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111b21; }
+  .phone { width: 320px; height: 660px; padding: 12px; border-radius: 48px; background: #1b1b1d;
+           box-shadow: inset 0 0 0 2px #3a3a3e; }
+  .screen { position: relative; height: 100%; border-radius: 36px; overflow: hidden; display: flex; flex-direction: column;
+            background: #efeae2; }
+  .status { display: flex; justify-content: space-between; align-items: center; height: 34px; padding: 0 26px;
+            background: #008069; color: #fff; font-size: 13px; font-weight: 600; }
+  .island { position: absolute; top: 9px; left: 50%; width: 86px; height: 22px; margin-left: -43px; border-radius: 11px;
+            background: #000; }
+  .head { display: flex; align-items: center; gap: 10px; padding: 6px 12px 10px; background: #008069; color: #fff; }
+  .head .back { font-size: 22px; line-height: 1; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .avatar img { width: 28px; height: 28px; }
+  .name { font-weight: 600; font-size: 16px; line-height: 20px; }
+  .sub { font-size: 12px; line-height: 15px; opacity: .85; }
+  .chat { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; padding: 10px; overflow: hidden; }
+  .msg { max-width: 82%; padding: 6px 8px 4px; border-radius: 8px; white-space: pre-wrap; box-shadow: 0 1px .5px rgb(11 20 26 / 13%); }
+  .msg.me { align-self: flex-end; background: #d9fdd3; border-top-right-radius: 0; }
+  .msg.bot { align-self: flex-start; background: #fff; border-top-left-radius: 0; }
+  .meta { float: right; margin: 6px 0 -4px 10px; font-size: 11px; color: #667781; }
+  .ticks { color: #53bdeb; letter-spacing: -3px; margin-left: 3px; }
+  .bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px 22px; }
+  .input { flex: 1; height: 40px; padding: 0 16px; border-radius: 20px; background: #fff; display: flex; align-items: center;
+           color: #111b21; font-size: 15px; white-space: pre; }
+  .input.empty { color: #8696a0; }
+  .caret { display: inline-block; width: 1.5px; height: 19px; margin-left: 1px; background: #00a884; }
+  .send { width: 40px; height: 40px; border-radius: 50%; background: #00a884; display: grid; place-items: center; }
+  .send svg { width: 20px; height: 20px; fill: #fff; }
+</style>
+</head>
+<body>
+<div class="phone"><div class="screen">
+  <div class="status"><span>9:41</span><span>5G ▮</span></div>
+  <div class="island"></div>
+  <div class="head">
+    <span class="back">‹</span>
+    <span class="avatar"><img src="../../assets/logo.svg" alt=""></span>
+    <span><div class="name">VozLocal</div><div class="sub" id="sub">online</div></span>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="bar">
+    <div class="input" id="input"></div>
+    <div class="send"><svg viewBox="0 0 24 24"><path d="M3.4 20.4 20.85 12.9a1 1 0 0 0 0-1.8L3.4 3.6a1 1 0 0 0-1.39 1.15L4 11l9 1-9 1-1.99 6.25a1 1 0 0 0 1.39 1.15z"/></svg></div>
+  </div>
+</div></div>
+<script>
+  const CPS = 9; // typing speed, characters a second
+  // [when, who, text]. Your messages are typed first, starting at `when`; the bot "types" for a moment, then answers.
+  const SCRIPT = [
+    [0.8, 'me', 'Bondi = Bus'],
+    [3.4, 'bot', 'Save this phrase?\nBondi → Bus\nReply yes to save it. Anything else discards it.'],
+    [5.6, 'me', 'yes'],
+    [7.4, 'bot', 'Saved: Bondi → Bus'],
+  ];
+  const BOT_TYPING = 1.0;
+  const esc = s => s.replace(/[&<]/g, c => ({ '&': '&amp;', '<': '&lt;' }[c]));
+
+  function render(t) {
+    let typed = '', typing = false, html = '';
+    SCRIPT.forEach(([at, who, text], i) => {
+      const sent = who === 'me' ? at + text.length / CPS + 0.3 : at;
+      if (who === 'me' && t >= at && t < sent) typed = text.slice(0, Math.floor((t - at) * CPS));
+      if (who === 'bot' && t >= at - BOT_TYPING && t < at) typing = true;
+      if (t < sent) return;
+      const ticks = who === 'me' ? `<span class="ticks">✓✓</span>` : '';
+      html += `<div class="msg ${who}">${esc(text)}<span class="meta">9:4${1 + (i >> 1)}${ticks}</span></div>`;
+    });
+    document.getElementById('chat').innerHTML = html;
+    document.getElementById('sub').textContent = typing ? 'typing…' : 'online';
+    const input = document.getElementById('input');
+    input.className = typed ? 'input' : 'input empty';
+    input.innerHTML = typed ? `${esc(typed)}<span class="caret"></span>` : 'Message';
+  }
+  render(0);
+</script>
+</body>
+</html>
