@@ -87,6 +87,6 @@ A spec fails if you forget. Your own phrases (`mine.psv`) aren't copied: the ext
 
 ```sh
 cd chrome
-node --test test             # logic
+node --test                  # logic
 bin/dev bundle exec rspec    # Ruby and browser specs, in Docker (the first build takes a few minutes)
 ```

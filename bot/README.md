@@ -67,7 +67,8 @@ The short version, for when you've done it before:
 ## Tests
 
 ```sh
-node --test bot/test
+cd bot
+node --test
 ```
 
-No packages needed, only Node 22.5 or newer: the tests run the Worker against Node's built-in SQLite, loaded with the real migration.
+No packages needed, only Node 22.13 or newer: the tests run the Worker against Node's built-in SQLite, loaded with the real migration.
