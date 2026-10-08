@@ -55,9 +55,10 @@ It never shows a learned phrase. Once every phrase in today's category is learne
 ```
 chrome/
 ├── extension/                the extension Chrome loads
+│   ├── manifest.json         Manifest V3; its key fixes the extension's id
 │   ├── newtab.{html,css,js}  the page; styles copy Google Translate's
-│   ├── lib/voz.js            picks the day's category and phrase, cleans stored settings, reads the
-│   │                         terminal host's replies; no DOM, so it's tested in Node
+│   ├── lib/voz.js            picks the day's category and phrase, cleans stored settings,
+│   │                         reads the terminal host's replies; no DOM, so it's tested in Node
 │   ├── data/phrases.json     terminal/data as JSON, made by bin/build-data; don't edit by hand
 │   ├── fonts/                Google Sans (SIL Open Font License)
 │   └── icons/                made by bin/build-icons
