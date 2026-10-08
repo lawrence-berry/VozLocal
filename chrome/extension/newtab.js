@@ -250,7 +250,7 @@ function wire() {
   document.addEventListener('keydown', e => { if (e.key === 'Tab') tabbing = true; }, true);
   document.addEventListener('pointerdown', () => { tabbing = false; }, true);
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     // Space presses a button only if it was reached with Tab; otherwise it reveals, then moves on.
     if (e.key === ' ' && tabbing && e.target.closest('button')) return;
     const action = {
