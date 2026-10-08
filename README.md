@@ -72,10 +72,10 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 | Part | Command | Checks |
 |---|---|---|
-| Terminal | `zsh terminal/tests/run.zsh` | 88, in plain zsh, including real pseudo-terminal shells |
+| Terminal | `zsh terminal/tests/run.zsh` | 98, in plain zsh, including real pseudo-terminal shells |
 | Bot | `node --test bot/test` | 19, against Node's built-in SQLite with the real migration (Node 22.5 or newer) |
-| Chrome logic | `cd chrome && node --test test` | 21, on picking phrases and reading the terminal's replies |
-| Chrome in the browser | `chrome/bin/dev bundle exec rspec` | 32 RSpec specs, most of them Playwright specs that load the real extension and its native host in Chromium, in Docker |
+| Chrome logic | `cd chrome && node --test test` | 19, on picking phrases and reading the terminal's replies |
+| Chrome in the browser | `chrome/bin/dev bundle exec rspec` | 40 RSpec specs, most of them Playwright specs that load the real extension and its native host in Chromium, in Docker |
 
 ## Roadmap
 
