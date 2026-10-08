@@ -2,6 +2,8 @@
 
 Message a phrase to your own WhatsApp bot, reply `yes`, and `voz sync` brings it into VozLocal on terminal and Chrome.
 
+<p align="center"><img src="../assets/whatsapp-demo.gif" width="240" alt="A WhatsApp chat on a phone: 'Bondi = Bus' is sent, the bot asks to confirm, 'yes' is sent, and the bot replies 'Saved: Bondi → Bus'" /></p>
+
 ```
 You:  Bondi = Bus
 Bot:  Save this phrase?

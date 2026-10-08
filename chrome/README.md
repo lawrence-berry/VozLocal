@@ -2,6 +2,8 @@
 
 A new tab page that shows a Rioplatense Spanish phrase, then its translation, like `voz` in the terminal. It's laid out like Google Translate, and it shares learned phrases and your WhatsApp phrases with the terminal.
 
+<p align="center"><img src="../assets/chrome-demo.gif" width="720" alt="The new tab: a Spanish phrase, a countdown, then its English meaning; it's marked learned, the next phrase follows, and the languages are swapped" /></p>
+
 ## Install
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
@@ -50,17 +52,26 @@ It never shows a learned phrase. Once every phrase in today's category is learne
 
 ## Layout
 
-| Path | What |
-|---|---|
-| `extension/` | The extension Chrome loads |
-| `extension/lib/voz.js` | Picking the day's category and phrase, cleaning stored settings, and reading the terminal host's replies. No DOM, so it's tested in Node |
-| `extension/newtab.*` | The page. Styles copy Google Translate's, with Google Sans bundled in `extension/fonts` (SIL Open Font License) |
-| `extension/data/phrases.json` | `terminal/data` bundled as JSON, made by `bin/build-data`. Don't edit it by hand |
-| `bin/build-data` | Rebuilds `phrases.json`. `--check` fails if it's out of date |
-| `bin/build-icons` | Renders `assets/logo.svg` as the extension's icons, in Chromium |
-| `bin/dev` | Runs a command in the Docker image (Ruby 3.4, Node and Playwright's Chromium), so nothing uses the system Ruby |
-| `test/` | Node tests for `voz.js` |
-| `spec/` | RSpec specs, including Playwright specs that load the extension in Chromium |
+```
+chrome/
+├── extension/                the extension Chrome loads
+│   ├── manifest.json         Manifest V3; its key fixes the extension's id
+│   ├── newtab.{html,css,js}  the page; styles copy Google Translate's
+│   ├── lib/voz.js            picks the day's category and phrase, cleans stored settings,
+│   │                         reads the terminal host's replies; no DOM, so it's tested in Node
+│   ├── data/phrases.json     terminal/data as JSON, made by bin/build-data; don't edit by hand
+│   ├── fonts/                Google Sans (SIL Open Font License)
+│   └── icons/                made by bin/build-icons
+├── bin/
+│   ├── build-data            rebuilds phrases.json; --check fails if it's out of date
+│   ├── build-gifs            records the README's GIFs: the real new tab, and the WhatsApp chat
+│   ├── whatsapp-demo.html    the phone build-gifs draws the chat on
+│   ├── build-icons           renders assets/logo.svg as the extension's icons, in Chromium
+│   └── dev                   runs a command in the Docker image (Ruby 3.4, Node, ffmpeg,
+│                             Playwright's Chromium), so nothing uses the system Ruby
+├── test/                     Node tests for voz.js
+└── spec/                     RSpec specs, including Playwright specs that load the extension
+```
 
 ## Phrases
 

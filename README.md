@@ -32,6 +32,14 @@ It ships with 37 phrases in five categories (greetings, *voseo*, expressions, *l
 | [**Chrome new tab**](chrome/README.md) | The same phrases in every new tab, laid out like Google Translate | Manifest V3 extension, native messaging |
 | [**WhatsApp bot**](bot/README.md) | Text `Bondi = Bus` to your bot, reply `yes`, and the phrase joins your rotation | Cloudflare Worker, D1, WhatsApp Cloud API |
 
+<p align="center">
+  <img src="assets/chrome-demo.gif" width="720" alt="The Chrome new tab: a Spanish phrase, a countdown, then its English meaning; it's marked learned, the next phrase follows, and the languages are swapped" />
+</p>
+
+<p align="center">
+  <img src="assets/whatsapp-demo.gif" width="260" alt="A WhatsApp chat on a phone: 'Bondi = Bus' is sent, the bot asks to confirm, 'yes' is sent, and the bot replies 'Saved: Bondi → Bus'" />
+</p>
+
 ```mermaid
 flowchart LR
   WA["WhatsApp<br/>Bondi = Bus"] --> Bot["Cloudflare Worker<br/>+ D1"]
@@ -53,17 +61,12 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 
 ## Engineering highlights
 
-- **Safe inside your shell.** The plugin runs inside your own shell, so your options and aliases can't change its behaviour. Every setting is checked as a plain number, so a bad value can't run code, and Ctrl-C is handled cleanly.
-- **Untrusted input handled carefully.**
-  - The bot verifies Meta's HMAC signature over the raw request bytes.
-  - It answers only allowed numbers, and handles each message once despite webhook retries.
-  - The bot refuses phrases with hidden or control characters, and the terminal and Chrome drop any that get through.
 - **A browser talking to local files.** Chrome extensions can't read files, so a small zsh program speaks Chrome's native messaging protocol. It shares a file lock with the terminal.
+- **Careful with untrusted input.** The plugin runs inside your shell, so your options and aliases can't change it, and settings are checked as plain numbers so a bad value can't run code. The bot verifies Meta's HMAC signature over the raw request bytes, answers only allowed numbers, handles each message once despite retries, and refuses phrases with hidden or control characters.
 - **Resilient sync.**
   - Marks made while Chrome can't reach the terminal are queued and replayed.
   - A new tab never waits more than 0.4 s for the terminal.
   - An optional cron job keeps phrases flowing when no terminal is open.
-- **No secrets in a public repo.** Tokens live outwith this repo and in Cloudflare, and examples use reserved, fictional numbers.
 
 ## Tests
 
@@ -77,8 +80,6 @@ Open a new terminal. To add the Chrome extension, see [chrome/README.md](chrome/
 ## Roadmap
 
 - ** Speach mode? **
-- **Animated GIFs** showing the Chrome new tab and the WhatsApp bot in action.
-- **Directory layouts as images:** show most of them as a picture of the tree rather than as text.
 
 <p align="center">
   <img src="assets/logo.svg" width="40" height="40" alt="" /><br />
