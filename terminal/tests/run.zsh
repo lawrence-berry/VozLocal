@@ -7,6 +7,7 @@ unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VO
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
+export VOZLOCAL_CONFIG=/dev/null  # ignore the developer's own config.zsh
 TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT
 integer passed=0 failed=0
