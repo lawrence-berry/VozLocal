@@ -47,6 +47,7 @@ All of these are optional. Put them in `terminal/config.zsh` (gitignored; start 
 | `VOZLOCAL_BOT_TOKEN` | *(unset)* | The bot's `SYNC_TOKEN`. Keep it in `~/.secrets/vozlocal.zsh`, not `~/.zshrc` ([SETUP.md section 13](../bot/SETUP.md#13-point-the-terminal-at-the-bot)) |
 | `VOZLOCAL_SYNC_INTERVAL` | `60` | Minimum minutes between background syncs when a terminal opens |
 | `VOZLOCAL_NOTIFY` | `1` | `0` turns off the macOS notification for new phrases |
+| `VOZLOCAL_CONFIG` | `terminal/config.zsh` | The settings file the plugin reads. Set it in `~/.zshrc` to keep settings elsewhere |
 | `NO_COLOR` | *(unset)* | Set it to anything to turn off colour ([no-color.org](https://no-color.org)) |
 
 For example, for a longer pause and a phrase in every new shell, `config.zsh` holds:

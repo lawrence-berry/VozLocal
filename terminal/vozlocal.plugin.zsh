@@ -8,8 +8,6 @@
 'builtin' 'setopt' 'no_aliases'
 
 VOZLOCAL_HOME=${${(%):-%x}:A:h}
-# Settings live in config.zsh next to this file (gitignored; copy config.example.zsh), so ~/.zshrc stays short.
-[[ -r ${VOZLOCAL_CONFIG:=$VOZLOCAL_HOME/config.zsh} ]] && source $VOZLOCAL_CONFIG
 zmodload zsh/datetime zsh/system
 
 # REPLY = value of variable $1 if it's a whole number, else $2. Guards $(( )), which evaluates code.
@@ -287,4 +285,6 @@ _vozlocal_startup() {
 
 (( _vozlocal_aliases )) && 'builtin' 'setopt' 'aliases'
 'builtin' 'unset' '_vozlocal_aliases'
+# Settings live in config.zsh next to this file (gitignored; copy config.example.zsh), so ~/.zshrc stays short.
+[[ -r ${VOZLOCAL_CONFIG:-$VOZLOCAL_HOME/config.zsh} ]] && source ${VOZLOCAL_CONFIG:-$VOZLOCAL_HOME/config.zsh}
 _vozlocal_startup
