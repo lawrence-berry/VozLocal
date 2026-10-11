@@ -285,4 +285,6 @@ _vozlocal_startup() {
 
 (( _vozlocal_aliases )) && 'builtin' 'setopt' 'aliases'
 'builtin' 'unset' '_vozlocal_aliases'
+# Settings live in config.zsh next to this file (gitignored; copy config.example.zsh), so ~/.zshrc stays short.
+[[ -r ${VOZLOCAL_CONFIG:-$VOZLOCAL_HOME/config.zsh} ]] && source ${VOZLOCAL_CONFIG:-$VOZLOCAL_HOME/config.zsh}
 _vozlocal_startup

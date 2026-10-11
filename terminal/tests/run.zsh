@@ -7,6 +7,7 @@ unset VOZLOCAL_REGION VOZLOCAL_DELAY VOZLOCAL_INTERVAL VOZLOCAL_SYNC_INTERVAL VO
 
 ROOT=${0:A:h:h}
 PLUGIN=$ROOT/vozlocal.plugin.zsh
+export VOZLOCAL_CONFIG=/dev/null  # ignore the developer's own config.zsh
 TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT
 integer passed=0 failed=0
@@ -273,7 +274,7 @@ check "a phrase reaches osascript as text, not script" \
 # Nothing may run while aliases are off: a Ctrl-C there would leave them off for the whole session.
 lines=( ${(f)"$(<$PLUGIN)"} )
 check "the plugin restores aliases before running anything at load" \
-  "${(j:/:)lines[-3,-1]}" "*'setopt' 'aliases'/*'unset' '_vozlocal_aliases'/_vozlocal_startup"
+  "${(j:/:)lines[-5,-1]}" "*'setopt' 'aliases'/*'unset' '_vozlocal_aliases'/#*/*source*/_vozlocal_startup"
 
 reset_sync; mkdir -p $TMP/sync/vozlocal; touch $TMP/sync/vozlocal/sync.in.123 $MINE.tmp.123; print -n > $TMP/reply
 check "voz sync clears temp files left by a killed sync" \

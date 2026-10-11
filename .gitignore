@@ -3,3 +3,4 @@ bot/node_modules/
 bot/.dev.vars
 bot/.wrangler/
 terminal/data/*/mine.psv*
+terminal/config.zsh
