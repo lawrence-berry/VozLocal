@@ -62,6 +62,11 @@ test('replies go to the sender through the Graph API', async () => {
   assert.equal(sent[0].type, 'text');
 });
 
+test('y confirms like yes', async () => {
+  await say('Bondi = Bus');
+  assert.equal(await say('y'), 'Saved: Bondi → Bus');
+});
+
 test('anything but yes discards the pending phrase', async () => {
   await say('Bondi = Bus');
   assert.match(await say('no'), /^Discarded: Bondi/);
@@ -110,6 +115,8 @@ test('non-text messages get the format help', async () => {
 
 test('parse refuses lines that would break a .psv file or the terminal', () => {
   assert.deepEqual(parse('Che = Hey'), { phrase: 'Che', translation: 'Hey' });
+  assert.deepEqual(parse('Che - Hey'), { phrase: 'Che', translation: 'Hey' });
+  assert.deepEqual(parse('well-known - famous'), { phrase: 'well-known', translation: 'famous' });
   assert.deepEqual(parse('a = b = c'), { phrase: 'a', translation: 'b = c' });
   for (const bad of ['', 'no separator', ' = meaning', 'phrase = ', 'a = b | c', 'a = b\nc', 'a = \x1b[31mred', 'a = \u009b31m',
     'a\u202e = b', 'a\u200b = b', 'a\ufeffb = c', 'a = b\u2028c', `${'x'.repeat(201)} = y`]) {
