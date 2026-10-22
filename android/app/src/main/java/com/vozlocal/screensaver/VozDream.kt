@@ -7,6 +7,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
+import java.io.ByteArrayInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
@@ -35,8 +36,10 @@ class VozDream : DreamService() {
             settings.allowFileAccess = false
             settings.allowContentAccess = false
             webViewClient = object : WebViewClient() {
+                // Only the bundled page's own origin loads; anything else gets an empty 403 instead of the network.
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
                     assets.shouldInterceptRequest(request.url)
+                        ?: WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 
                 override fun onPageFinished(view: WebView, url: String) = fetchPersonal(view)
             }
