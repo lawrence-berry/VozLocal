@@ -83,6 +83,17 @@ All four run on every push and pull request, in GitHub Actions, and the terminal
 ## Roadmap
 
 - **Speech mode?**
+- **Android screensaver (Motorola).** Show the phrases as the phone's screensaver over a custom background image. A high-level plan, in order:
+  1. **Phrases to the phone.** The phone can't read the Mac's files, so the bot's D1 database becomes the phone's source: add a read-only, token-protected `/phrases` endpoint to the Worker, and have the terminal's `voz sync` push learned marks back so all four places stay in step.
+  2. **Backgrounds from DeviantArt.** The existing Ruby DeviantArt code runs on the Mac (cron, in Docker) and uploads a few chosen images plus a small `backgrounds.json` to a Cloudflare R2 bucket through the Worker. The phone only downloads; it never scrapes. Check each artist's terms before reusing their art, and keep the credit text with the image.
+  3. **The screensaver itself.** Android's screensaver is a `DreamService` (Settings > Display > Screen saver), which needs a small native Kotlin app. It hosts one `WebView` that loads a page from the Worker, reusing the Chrome new tab's layout (phrase, countdown, translation) over the background, so there is little new UI code.
+  4. **Offline and battery.** Cache the last phrases and images on the phone, refresh on charge or Wi-Fi, and dim the text slowly to avoid OLED burn-in.
+  5. **Install.** Side-load the APK for personal use first; the Play Store is a later question.
+- **Duolingo screenshots to phrases.** Screenshot the words you're struggling with in Duolingo, send the image to the bot, and get the Spanish and English pairs back. A high-level plan, in order:
+  1. **Send the image to the bot.** Duolingo is on the phone and so is WhatsApp, so the screenshot goes to the existing bot as an image message. The Worker fetches the image from the WhatsApp Cloud API's media endpoint, still answering only allowed numbers.
+  2. **Extract with a vision model.** The Worker sends the image to Claude (Haiku, which can read images and is cheap) with a prompt asking for a JSON list of `{spanish, english}` pairs and nothing else. The Anthropic key is a Worker secret.
+  3. **Reuse the confirm flow.** The bot replies with the pairs, you answer `yes`, and they join the rotation exactly like a typed `Bondi = Bus` does today. Nothing is saved unconfirmed, and the existing check that refuses hidden or control characters runs on every extracted phrase, because the model's output is untrusted.
+  4. **Later, if wanted.** Drop screenshots from the Mac too (a `voz add-image` command), and tag these phrases as "Duolingo" so they can be filtered.
 
 ## Licence
 
