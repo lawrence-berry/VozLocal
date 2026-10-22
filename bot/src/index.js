@@ -5,7 +5,7 @@ const MAX_LEN = 200;
 const PENDING_TTL = 10 * 60;        // seconds a preview waits for its yes
 const SEEN_TTL = 7 * 24 * 60 * 60;  // seconds a message id is remembered, well past Meta's retries
 const YES = /^(yes|y|si|sí)[.!]*$/i;
-const HELP = 'Send a phrase as: phrase = meaning\nFor example: Bondi = Bus';
+const HELP = 'Send a phrase as: phrase = meaning\nFor example: Bondi = Bus\nAlso: | or - (spaced) instead of =, and Y to confirm';
 
 export default {
   async fetch(request, env, ctx) {
@@ -90,12 +90,12 @@ export async function handle(db, message) {
   return `${pending ? `Discarded: ${pending.phrase}\n` : ''}Save this phrase?\n${parsed.phrase} → ${parsed.translation}\nReply yes to save it. Anything else discards it.`;
 }
 
-// `phrase = meaning` or `phrase | meaning`, split at the first separator. Refuses anything that would
+// `phrase = meaning`, `phrase | meaning` or `phrase - meaning` (spaced, so "well-known" stays whole), split at the first separator. Refuses anything that would
 // break a .psv line, reach the terminal as a control sequence, or reorder or hide text (bidi and zero-width marks).
 export function parse(text) {
-  const at = text.search(/[=|]/);
-  if (!text || at < 0) return { error: HELP };
-  const phrase = text.slice(0, at).trim(), translation = text.slice(at + 1).trim();
+  const sep = /[=|]| - /.exec(text);
+  if (!text || !sep) return { error: HELP };
+  const phrase = text.slice(0, sep.index).trim(), translation = text.slice(sep.index + sep[0].length).trim();
   if (!phrase || !translation) return { error: HELP };
   if (/[|\p{Cc}\p{Cf}\u2028\u2029]/u.test(phrase + translation)) return { error: `Use one line, and no | inside the phrase or meaning.\n${HELP}` };
   if (phrase.length > MAX_LEN || translation.length > MAX_LEN) return { error: `Keep the phrase and meaning under ${MAX_LEN} characters each.` };

@@ -39,7 +39,7 @@ The code is portable. The message handling in `src/index.js` is plain JavaScript
 
 ## Message format
 
-One phrase per message: `phrase = meaning` or `phrase | meaning`. Anything else gets a reply showing the format. Phrases already saved are reported, not stored twice. A preview waits 10 minutes for its `yes`, and sending a new phrase replaces it.
+One phrase per message: `phrase = meaning`, `phrase | meaning` or `phrase - meaning` (the hyphen needs a space each side). Anything else gets a reply showing the format. Phrases already saved are reported, not stored twice. A preview waits 10 minutes for its `yes`, and sending a new phrase replaces it.
 
 ## Setup
 
