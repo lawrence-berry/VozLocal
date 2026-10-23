@@ -64,10 +64,8 @@ chrome/
 │   └── icons/                made by bin/build-icons
 ├── bin/
 │   ├── build-data            rebuilds phrases.json; --check fails if it's out of date
-│   ├── build-gifs            records the README's GIFs: the real new tab, and the WhatsApp chat
-│   ├── whatsapp-demo.html    the phone build-gifs draws the chat on
 │   ├── build-icons           renders assets/logo.svg as the extension's icons, in Chromium
-│   └── dev                   runs a command in the Docker image (Ruby 3.4, Node, ffmpeg,
+│   └── dev                   runs a command in the Docker image (Ruby 3.4, Node,
 │                             Playwright's Chromium), so nothing uses the system Ruby
 ├── test/                     Node tests for voz.js
 └── spec/                     RSpec specs, including Playwright specs that load the extension

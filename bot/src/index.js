@@ -43,8 +43,7 @@ async function receive(request, env, ctx) {
         await env.DB.prepare('INSERT OR IGNORE INTO seen (message_id, created_at) VALUES (?, ?)')
           .bind(message.id, now()).run();
         // Reply after responding, so a slow Graph API call can't push Meta's webhook into a timeout.
-        const sending = send(env, message.from, reply);
-        if (ctx?.waitUntil) ctx.waitUntil(sending); else await sending;
+        ctx.waitUntil(send(env, message.from, reply));
       }
     }
   }

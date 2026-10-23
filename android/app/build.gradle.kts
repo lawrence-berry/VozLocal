@@ -27,6 +27,9 @@ android {
         buildConfigField("String", "VOZ_TOKEN", "\"${local.getProperty("VOZ_TOKEN", "")}\"")
     }
 
+    // The Chrome new tab's logic, phrases and font ship as they are in chrome/extension, the single source.
+    sourceSets["main"].assets.srcDirs("../../chrome/extension/lib", "../../chrome/extension/data", "../../chrome/extension/fonts")
+
     buildFeatures {
         buildConfig = true
     }
