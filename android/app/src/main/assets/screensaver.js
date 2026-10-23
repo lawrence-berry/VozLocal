@@ -1,6 +1,6 @@
 // The screensaver: a phrase, a short countdown, then its meaning, over a slowly drifting, slowly dimming stage.
 // The same pick as the Chrome new tab (lib voz.js), but with nothing to click: a screensaver is just watched.
-import { dayNumber, key, pick, todaysChoice } from './voz.js';
+import { cleanSettings, dayNumber, key, pick, todaysChoice } from './voz.js';
 import { dimAt, driftOffset, parsePersonal, readCache, writeCache } from './lib.js';
 
 const TICK_MS = 250;
@@ -13,7 +13,7 @@ const $ = id => document.getElementById(id);
 const started = Date.now();
 const none = new Set(); // learned marks don't reach the phone yet
 let region = {};
-let mine = readCache(localStorage);
+let mine = cleanSettings({ mine: readCache(localStorage) }).mine; // the cached rows, minus anything malformed
 let last = null;
 let timer;
 

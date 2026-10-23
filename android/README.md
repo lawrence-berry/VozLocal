@@ -11,7 +11,7 @@ The phrases as the phone's screensaver (Settings › Display › Screen saver): 
 - `VozDream.kt` is a `DreamService` with one `WebView`. The `WebView` loads `app/src/main/assets/index.html` through `WebViewAssetLoader`, which gives the bundled page a real https origin so its ES modules and `localStorage` work.
 - `screensaver.js` picks phrases with the Chrome new tab's own logic (`voz.js`) from the built-in phrases and the personal ones from the WhatsApp bot. `lib.js` holds the parts that need no browser (parsing, drift, dimming, the cache) and is what `node --test` checks.
 - The app, not the page, calls the Worker's `GET /phrases` with the bearer token, then hands the text to `window.vozPersonal`. The Worker sends no CORS headers, and the token never reaches the page. The last phrases are cached in `localStorage`, so the screensaver works offline. A failed fetch keeps the cache.
-- `voz.js`, `phrases.json` and the font are copied from `chrome/extension` by `bin/sync-assets` and are gitignored here, so the Chrome tab stays the single source.
+- `voz.js`, `phrases.json` and the font are bundled straight from `chrome/extension` by `app/build.gradle.kts`, so the Chrome tab stays the single source.
 
 ## Configure
 

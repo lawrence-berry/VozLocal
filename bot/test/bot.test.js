@@ -38,13 +38,16 @@ beforeEach(() => {
 });
 
 let nextId = 0;
-function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}`, ctx, timestamp } = {}) {
+// The replies go out through ctx.waitUntil, as in a Worker; this stub's promises are awaited by say().
+let pendingSends = [];
+const stubCtx = () => ({ waitUntil: p => pendingSends.push(p) });
+function webhook(text, { from = ME, secret = env.APP_SECRET, type = 'text', id = `wamid.${++nextId}`, ctx = stubCtx(), timestamp } = {}) {
   const message = { from, id, type, ...(timestamp ? { timestamp } : {}), ...(type === 'text' ? { text: { body: text } } : {}) };
   const body = JSON.stringify({ entry: [{ changes: [{ value: { messages: [message] } }] }] });
   const sig = 'sha256=' + createHmac('sha256', secret).update(body).digest('hex');
   return worker.fetch(new Request('https://bot.test/webhook', { method: 'POST', body, headers: { 'X-Hub-Signature-256': sig } }), env, ctx);
 }
-const say = async (text, opts) => { sent = []; await webhook(text, opts); return sent.at(-1)?.text.body; };
+const say = async (text, opts) => { sent = []; await webhook(text, opts); await Promise.all(pendingSends.splice(0)); return sent.at(-1)?.text.body; };
 const phrases = (since = '0', token = env.SYNC_TOKEN) =>
   worker.fetch(new Request(`https://bot.test/phrases?since=${since}`, { headers: { Authorization: `Bearer ${token}` } }), env);
 

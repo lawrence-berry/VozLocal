@@ -1,6 +1,6 @@
 // The screensaver's pure logic, free of the DOM so node --test can run it.
 
-export const CACHE_KEY = 'vozlocal.personal';
+const CACHE_KEY = 'vozlocal.personal';
 export const DIM_MINUTES = 30; // how long the text takes to fade to its dimmest
 export const DIM_MIN = 0.35;   // the dimmest opacity: still readable, but not a fixed bright image on an OLED
 export const DRIFT_RANGE = 10; // the text wanders up to this many vw/vh from the centre
@@ -27,12 +27,9 @@ export function dimAt(minutes) {
 }
 
 // The last phrases fetched, kept in localStorage so the screensaver works offline. Storage can be missing or
-// full, so a failure is an empty list or a skipped write, never a crash.
+// full, so a failure is null (no cache) or a skipped write, never a crash. The caller cleans what it reads.
 export function readCache(storage) {
-  try {
-    const rows = JSON.parse(storage.getItem(CACHE_KEY));
-    return Array.isArray(rows) ? rows.filter(r => Array.isArray(r) && r.length === 2 && r.every(s => typeof s === 'string' && s)) : [];
-  } catch { return []; }
+  try { return JSON.parse(storage.getItem(CACHE_KEY)); } catch { return null; }
 }
 
 export function writeCache(storage, rows) {

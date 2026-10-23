@@ -2,7 +2,3 @@ local.properties
 build/
 .gradle/
 *.apk
-# Copied from chrome/extension by bin/sync-assets, so the Chrome tab stays the single source.
-app/src/main/assets/voz.js
-app/src/main/assets/phrases.json
-app/src/main/assets/GoogleSans-latin.woff2

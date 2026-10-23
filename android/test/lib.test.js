@@ -33,16 +33,14 @@ test('dimAt falls in a line from 1 to DIM_MIN and stays there', () => {
 
 test('the phrase cache round-trips and survives bad or missing storage', () => {
   const storage = fakeStorage();
-  assert.deepEqual(readCache(storage), []);
+  assert.equal(readCache(storage), null);
   writeCache(storage, [['Bondi', 'Bus']]);
   assert.deepEqual(readCache(storage), [['Bondi', 'Bus']]);
 
   storage.setItem('vozlocal.personal', '{not json');
-  assert.deepEqual(readCache(storage), []);
-  storage.setItem('vozlocal.personal', JSON.stringify([['ok', 'fine'], ['one'], [1, 2], 'x']));
-  assert.deepEqual(readCache(storage), [['ok', 'fine']]);
+  assert.equal(readCache(storage), null);
 
   const broken = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('full'); } };
-  assert.deepEqual(readCache(broken), []);
+  assert.equal(readCache(broken), null);
   assert.doesNotThrow(() => writeCache(broken, [['a', 'b']]));
 });
