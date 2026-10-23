@@ -1,0 +1,38 @@
+@font-face {
+  font-family: 'Google Sans';
+  src: url('GoogleSans-latin.woff2') format('woff2');
+  font-weight: 400 500;
+  font-display: block;
+}
+
+:root { --dim: 1; }
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  overflow: hidden;
+  background: #000 url('background.svg') center / cover no-repeat;
+  color: #f1f3f4;
+  font: 500 5vmin/1.3 'Google Sans', Roboto, Arial, sans-serif;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  height: 100%;
+  padding: 8vmin;
+  text-align: center;
+  opacity: var(--dim);
+  transition: transform 30s ease-in-out, opacity 5s linear;
+}
+
+p { margin: 0; overflow-wrap: anywhere; }
+.phrase { font-size: 9vmin; }
+.dots { min-height: 6vmin; font-size: 6vmin; letter-spacing: 1vmin; color: #9aa0a6; }
+.meaning { font-size: 6vmin; color: #a8c7fa; opacity: 0; transition: opacity 1s; }
+.revealed .meaning { opacity: 1; }

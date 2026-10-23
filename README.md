@@ -25,12 +25,13 @@ Textbook Spanish won't help when someone in Buenos Aires says *"Che, Â¿vos querÃ
 
 It ships with 37 phrases in five categories (greetings, *voseo*, expressions, *lunfardo* and full sentences), and you can add your own.
 
-## Three parts, one set of phrases
+## Four parts, one set of phrases
 
 | Part | What it does | Built with |
 |---|---|---|
 | [**Terminal**](terminal/README.md) | A phrase when you open a terminal, with `voz` for another and `yas` to mark one as learned | zsh |
 | [**Chrome new tab**](chrome/README.md) | The same phrases in every new tab, laid out like Google Translate | Manifest V3 extension, native messaging |
+| [**Android screensaver**](android/README.md) | The phrases as the phone's screensaver, with a countdown and a slowly drifting, dimming display | Kotlin `DreamService`, WebView |
 | [**WhatsApp bot**](bot/README.md) | Text `Bondi = Bus` to your bot, reply `yes`, and the phrase joins your rotation | Cloudflare Worker, D1, WhatsApp Cloud API |
 
 <p align="center">
@@ -78,6 +79,7 @@ All four run on every push and pull request, in GitHub Actions, and the terminal
 | Terminal | `zsh terminal/tests/run.zsh` | 98, in plain zsh, including real pseudo-terminal shells |
 | Bot | `cd bot && node --test` | 19, against Node's built-in SQLite with the real migration (Node 22.13 or newer) |
 | Chrome logic | `cd chrome && node --test` | 19, on picking phrases and reading the terminal's replies |
+| Android screensaver logic | `cd android && node --test` | 4, on reading the phrases, drift, dimming and the offline cache |
 | Chrome in the browser | `chrome/bin/dev bundle exec rspec` | 40 RSpec specs, most of them Playwright specs that load the real extension and its native host in Chromium, in Docker |
 
 ## Roadmap
@@ -86,8 +88,8 @@ All four run on every push and pull request, in GitHub Actions, and the terminal
 - **Android screensaver (Motorola).** Show the phrases as the phone's screensaver over a custom background image. A high-level plan, in order:
   1. **Phrases to the phone.** The phone can't read the Mac's files, so the bot's D1 database becomes the phone's source: add a read-only, token-protected `/phrases` endpoint to the Worker, and have the terminal's `voz sync` push learned marks back so all four places stay in step.
   2. **Backgrounds from DeviantArt.** The existing Ruby DeviantArt code runs on the Mac (cron, in Docker) and uploads a few chosen images plus a small `backgrounds.json` to a Cloudflare R2 bucket through the Worker. The phone only downloads; it never scrapes. Check each artist's terms before reusing their art, and keep the credit text with the image.
-  3. **The screensaver itself.** Android's screensaver is a `DreamService` (Settings > Display > Screen saver), which needs a small native Kotlin app. It hosts one `WebView` that loads a page from the Worker, reusing the Chrome new tab's layout (phrase, countdown, translation) over the background, so there is little new UI code.
-  4. **Offline and battery.** Cache the last phrases and images on the phone, refresh on charge or Wi-Fi, and dim the text slowly to avoid OLED burn-in.
+  3. **The screensaver itself (built).** See [android/README.md](android/README.md). A `DreamService` hosts one `WebView` on a page bundled in the APK, reusing the Chrome new tab's logic and font. The app fetches `/phrases` itself, so the token never reaches the page. The background is a bundled placeholder until step 2 lands.
+  4. **Offline and battery (phrases built).** The last phrases are cached on the phone, refreshed each time the screensaver starts, and the text drifts and dims slowly to avoid OLED burn-in. Still to do: caching the backgrounds.
   5. **Install.** Side-load the APK for personal use first; the Play Store is a later question.
 - **Duolingo screenshots to phrases.** Screenshot the words you're struggling with in Duolingo, send the image to the bot, and get the Spanish and English pairs back. A high-level plan, in order:
   1. **Send the image to the bot.** Duolingo is on the phone and so is WhatsApp, so the screenshot goes to the existing bot as an image message. The Worker fetches the image from the WhatsApp Cloud API's media endpoint, still answering only allowed numbers.

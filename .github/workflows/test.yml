@@ -28,6 +28,8 @@ jobs:
         working-directory: bot
       - run: node --test
         working-directory: chrome
+      - run: node --test
+        working-directory: android
 
   browser:
     runs-on: ubuntu-latest
