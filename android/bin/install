@@ -1,0 +1,6 @@
+#!/bin/sh
+# Build the debug APK in Docker, then install it over the connected device (data kept).
+set -e
+cd "$(dirname "$0")/.."
+bin/build
+adb install -r app/build/outputs/apk/debug/app-debug.apk

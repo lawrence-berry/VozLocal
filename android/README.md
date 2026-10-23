@@ -30,7 +30,7 @@ The Android SDK lives in Docker, not on the Mac:
 
 ```sh
 android/bin/build        # android/app/build/outputs/apk/debug/app-debug.apk
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+android/bin/install      # build, then adb install -r (keeps app data)
 ```
 
 The first build downloads the SDK and Gradle's dependencies, and runs under emulation on Apple silicon, so it is slow. Then choose **VozLocal** under Settings › Display › Screen saver.
