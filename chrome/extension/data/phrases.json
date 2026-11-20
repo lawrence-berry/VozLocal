@@ -1,6 +1,30 @@
 {
   "es_AR": {
-    "expression": [
+    "cops_crime": [
+      ["Yuta","The cops (pejorative)"],
+      ["Cana","Police officer / Cops"],
+      ["Afanar","To steal"],
+      ["Boleta","Dead / Wrecked"],
+      ["Boletear","To kill / Be killed"],
+      ["Botón","Snitch / Police (pejorative)"],
+      ["Buchón","Informant / Snitch"],
+      ["Fierro","Gun (slang)"],
+      ["Garcar/Garca","To screw over / Betrayer"],
+      ["La gorra","The police"]
+    ],
+    "drink_drugs_party": [
+      ["Curda","Drunk / a bout of drinking"],
+      ["Tuca","Roach (joint end)"],
+      ["Joda","Party / Joke"],
+      ["Cachengue","Loud party music / Party with reggaetón or cumbia"],
+      ["Faso","Joint / Weed"],
+      ["Estar en pedo","To be drunk"],
+      ["Estar pasado/a","To be wasted / On drugs"],
+      ["Reventarse","To party hard / Burn out"],
+      ["Escabiar","To drink alcohol"],
+      ["Flashear","To trip / Overreact"]
+    ],
+    "expressions": [
       ["Mirá vos","Wow / no way / huh"],
       ["Ni ahí","No way / not a chance"],
       ["Posta","Really / seriously / for real"],
@@ -11,7 +35,37 @@
       ["Al pedo","For nothing / pointless"],
       ["De una","Absolutely / right away"],
       ["Ojo","Watch out / heads up"],
-      ["Tá","Shortened \"está\" - yeah/ok, very casual"]
+      ["Tá","Shortened \"está\" - yeah/ok, very casual"],
+      ["Chamuyar","To sweet-talk / bullshit"],
+      ["Fiaca","Laziness (tengo fiaca = I don't feel like doing anything)"],
+      ["Macana","Lie / Mistake"],
+      ["Manija","Anxious / Obsessed"],
+      ["Pintar","To happen / Pop up"],
+      ["Pudrirse","To go bad / Start a fight"],
+      ["Re cabió","Got owned / Hit hard"],
+      ["Se picó","It got wild / Escalated"],
+      ["Sos pollo","You're done / Dead meat"],
+      ["Tomatela","Get lost"],
+      ["Vos fijate","You decide (ironic)"],
+      ["Zafar","To manage / Get away with something"],
+      ["Ponerse las pilas","To get one’s act together"],
+      ["Andar a los tumbos","To be struggling / Messing around without direction"],
+      ["Mufa","Bad luck / Jinx"],
+      ["Yeta","Cursed / Brings bad luck"],
+      ["Rajá de acá","Get out of here (rude/playful)"],
+      ["Estar al horno","To be in trouble"],
+      ["Tener aguante","To be resilient / Tough"],
+      ["Irse al pasto","To go too far / Cross a line"],
+      ["Dar bola","To pay attention / Give someone the time of day"],
+      ["Ni en pedo","No way / Not a chance"],
+      ["Hacerse el boludo","To play dumb / Pretend not to notice"],
+      ["Al toque","Right away / Immediately"],
+      ["Bardo","Trouble / Drama / Fight"],
+      ["Bancar","To support / Put up with"],
+      ["Chamuyo","Smooth talk / BS"],
+      ["De onda","Just because / As a favor"],
+      ["Dar manija","Hype someone up / Stir up"],
+      ["Junar","To know / Recognize"]
     ],
     "greeting": [
       ["Che","Hey / dude (used to address anyone)"],
@@ -21,19 +75,51 @@
       ["Bárbaro","Great / awesome"],
       ["Buenísimo","Really good"]
     ],
-    "lunfardo": [
+    "insults": [
+      ["Chetola","Snobby, exclusive"],
+      ["Loji","Weak / Silly"],
+      ["Marmota","Fool / Spacey person"],
+      ["Ortiba","Killjoy / Snitch"],
+      ["Otario","Fool / Sucker"],
+      ["Pancho","Coward / Clown"],
+      ["Rata","Stingy / Cheap person"],
+      ["Salame","Idiot / Fool"],
+      ["Cheto/a","Snob / Rich and stuck-up person"],
+      ["Ser un clavo","To be a drag / Useless / Annoying"],
+      ["Ser un nabo","To be an idiot / Fool"],
+      ["Ser un goma","To be annoying / Try too hard"],
+      ["Bardear","To insult / Pick a fight"],
+      ["Careta","Fake / Conformist"],
+      ["Escrachar","To expose / Shame publicly"],
+      ["Fantasma","Poser / Fake person"],
+      ["Gede","Annoying / Relentless"],
+      ["Gil","Fool / Idiot"]
+    ],
+    "money_work": [
       ["Laburo","Job / work"],
       ["Guita","Money"],
       ["Mango","A peso / money"],
+      ["Vende humo","Talks big, does nothing"],
+      ["Laburar","To work"],
+      ["Estar en la lona","To be broke / Down and out"],
+      ["Changa","Gig / Side job"]
+    ],
+    "people_places_things": [
       ["Pibe/piba","Kid / young guy or girl"],
-      ["Chamuyar","To sweet-talk / bullshit"],
-      ["Trucho","Fake / bad quality"],
       ["Bondi","Bus"],
-      ["Fiaca","Laziness (tengo fiaca = I don't feel like doing anything)"],
-      ["Zarpado","Wild / over the top"],
-      ["Copado","Cool / nice"],
-      ["Curda","Drunk / a bout of drinking"],
-      ["Chetola","Snobby, exclusive"]
+      ["Lija","Extreme hunger"],
+      ["Morfi","Food"],
+      ["Ñeri","Bro / Dude"],
+      ["Patova","Bouncer"],
+      ["Piñas","Punches / Fists"],
+      ["Tuco","Tomato/meat sauce"],
+      ["Mina","Girl / Chick"],
+      ["Villero/a","Someone from a poor neighborhood (can be pejorative or reclaiming)"],
+      ["Gamba","Leg / Favor (hacer la gamba = to help someone out)"],
+      ["Panza","Belly / Tummy (informal)"],
+      ["Ciruja","Homeless person / Trash picker"],
+      ["Covacha","Cramped room / Hiding place"],
+      ["Jermu","Wife / Girlfriend"]
     ],
     "sample_sentence": [
       ["Che, ¿vos querés ir al bondi o caminamos?","Hey, do you want to take the bus or walk?"],
@@ -41,11 +127,33 @@
       ["Qué quilombo se armó en el laburo.","What a mess broke out at work."],
       ["Dale, nos vemos en un rato.","Okay, see you in a bit."]
     ],
+    "vibes_style": [
+      ["Trucho","Fake / bad quality"],
+      ["Zarpado","Wild / over the top"],
+      ["Copado","Cool / nice"],
+      ["Picante","Dangerous / Sharp / Intense"],
+      ["Pinta","Style / Looks"],
+      ["Roto/a","Emotionally damaged"],
+      ["Alto","Awesome / Great"],
+      ["Berreta","Cheap / Low-quality"],
+      ["Bocha","A lot / Tons"],
+      ["Facha","Good-looking / Stylish"]
+    ],
     "voseo": [
       ["¿Vos querés?","Do you want?"],
       ["¿Vos tenés?","Do you have?"],
       ["¿De dónde sos?","Where are you from?"],
       ["¿Cómo andás?","How are you doing?"]
+    ],
+    "vulgar": [
+      ["Pelotudo/a","Idiot / Jerk"],
+      ["Sorete","Piece of shit (person)"],
+      ["Jeta","Face (rude or informal)"],
+      ["Mandarse una cagada","To mess things up badly"],
+      ["Choto","Lame / Bad"],
+      ["Estar al palo","Very hyped / Horny / Intense"],
+      ["Forro","Jerk / Condom (contextual)"],
+      ["Guarango","Vulgar / Crude"]
     ]
   }
 }
