@@ -3,7 +3,6 @@
     "cops_crime": [
       ["Yuta","The cops (pejorative)"],
       ["Cana","Police officer / Cops"],
-      ["La yuta","The cops (derogatory slang)"],
       ["Afanar","To steal"],
       ["Boleta","Dead / Wrecked"],
       ["Boletear","To kill / Be killed"],
@@ -59,7 +58,6 @@
       ["Irse al pasto","To go too far / Cross a line"],
       ["Dar bola","To pay attention / Give someone the time of day"],
       ["Ni en pedo","No way / Not a chance"],
-      ["Tener fiaca","To be feeling lazy / Unmotivated"],
       ["Hacerse el boludo","To play dumb / Pretend not to notice"],
       ["Al toque","Right away / Immediately"],
       ["Bardo","Trouble / Drama / Fight"],
@@ -155,7 +153,6 @@
       ["Choto","Lame / Bad"],
       ["Estar al palo","Very hyped / Horny / Intense"],
       ["Forro","Jerk / Condom (contextual)"],
-      ["Gato/a","Sex worker / Flashy person"],
       ["Guarango","Vulgar / Crude"]
     ]
   }
