@@ -23,7 +23,7 @@
 
 Textbook Spanish won't help when someone in Buenos Aires says *"Che, ¿vos querés ir al bondi o caminamos?"* VozLocal teaches the slang (*lunfardo*), the *vos* verb forms and the everyday expressions by repetition, in the places you already spend your day. A phrase appears, you get a moment to recall its meaning, and then the translation is revealed. There's no app to open, no streak to keep, and nothing leaves your machine unless you set up the bot.
 
-It ships with 37 phrases in five categories (greetings, *voseo*, expressions, *lunfardo* and full sentences), and you can add your own.
+It ships with 136 phrases in eleven categories (greetings, *voseo*, full sentences, expressions, and slang for insults, vulgarity, cops and crime, drink and drugs, money and work, people and places, and style), and you can add your own.
 
 ## Four parts, one set of phrases
 
